@@ -1,0 +1,40 @@
+`/ this is a line comment
+
+`\ this is block comment \`
+
+`\ outer comment  `\ nested comment \` outer comment \`
+
+a: schema {} `/ declare name "a" and bind it to schema
+b: a; `/ aliasing
+
+c: make a; `/ creating an instance of schema "a"
+d: make schema {} `/ creating an instance of unnamed schema
+
+schema {
+	a: schema {} `/ nested entity
+	
+	algorithm none `/ "bare algorithm" declaration header
+	body { `\ some code here \` } `/ algorithm body
+	
+	algorithm none () `/ "brace algorithm" declaration header
+	body { `\ some code here \` }
+	
+	algorithm none (x: make a) `/ algorithm with arguments
+	body { `\ some code here \` }
+	
+	algorithm none (x1: make a, x2: make a) `/ multiargumetns variant
+	body { `\ some code here \` }
+	
+	algorithm none left l: make a right r: make a `/ "placement algorithm" declaration header
+	body { `\ some code here \` }
+
+	algorithm none left l: make a `/ "placement algorithm" declaration header, left part only
+	body { `\ some code here \` }
+	
+	algorithm none right r: make a `/ "placement algorithm" declaration header, right part only
+	body { `\ some code here \` }
+
+	algorithm none right r1: make a, r2: make a `/ multiargumetns variant
+	body { `\ some code here \` }
+}
+
