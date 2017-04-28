@@ -1,0 +1,88 @@
+# rules:
+# <identifier> - entity 'identifier'
+# 'text' or "text" - raw text
+# a | b - a or b
+# (a | b) | c - grouping
+# [a] b - optional a
+# {a} - 0 or more a
+# * - anything
+
+
+# alphabet:
+<digit> = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
+<small letter> = 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h' | 'i' | 'j' | 'k' | 'l' | 'm' | 'n' | 'o' | 'p' | 'q' | 'r' | 's' | 't' | 'u' | 'v' | 'w' | 'x' | 'y' | 'z';
+<capital letter> = 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h' | 'i' | 'j' | 'k' | 'l' | 'm' | 'n' | 'o' | 'p' | 'q' | 'r' | 's' | 't' | 'u' | 'v' | 'w' | 'x' | 'y' | 'z';
+<letter> = <small letter> | <capital letter>;
+<glyph> = <letter> | <digit> | '_';
+<symbol> = '~' | '!' | '@' | '#' | '$' | '%' | '^' | '&' | '*' | '-' | '+' | '<' | '>' | '?' | '/' | '|' | '\\';
+<special symbol> = '.' | ',' | ':' | ';' | '`';
+<round brace> = '(' | ')';
+<figure brace> = '{' | '}';
+<square brace> = '[' | ']';
+<opening brace> = '(' | '{' | '[';
+<closing brace> = ')' | '}' | ']';
+<brace> = <round brace> | <figure brace> | <square brace>;
+
+
+# comments:
+<line comment> = '`/' * '\n';
+<block comment> = '`\\' * '\\`';
+
+
+# naming:
+<identifier> = (<glyph> {<glyph>}) | (<symbol> {<symbol>});
+<name> = { '.' } <identifier> { '.' <identifier> };
+<name binder> = <identifier> ':';
+<naming> = <name binder> <entity>;
+<aliasing> = <name binder> <name>;
+<name binding> = <naming> | <aliasing>;
+
+
+# keywords
+<keyword schema> = 'schema' | <name>;
+<keyword algorithm> = 'algorithm' | <name>;
+<keyword left> = 'left' | <name>;
+<keyword right> = 'right' | <name>;
+<keyword make> = 'make' | <name>;
+<keyword body> = 'body' | <name>;
+
+
+# entities
+<entity> = <schema> | <algorithm> | <instance>;
+
+
+# schemas
+<schema> = <schema definition>  | <name>;
+<schema definition> = <keyword schema> '{' { <schema content> } '}';
+<schema content> = <schema definition> | <name binding> | ';';
+
+
+# instances
+<instance> = <instance definition> | <name>;
+<instance definition> = <keyword make> <schema>;
+
+
+# algorithms
+<algorithm> = <algorithm definition> | <name>;
+<algorithm definition> = <keyword algorithm> <schema> (<bare algorithm definition> | <brace algorithm definition> | <placement algorithm definition>);
+
+<bare algorithm definition> = <algorithm body>;
+<brace algorithm definition> = <opening brace> [<algorithm arguments>] <closing brace> <algorithm body>;
+<placement algorithm definition> =
+	(
+		(<keyword left> <algorithm arguments>) |
+		(<keyword right> <algorithm arguments>) |
+		(<keyword left> <algorithm arguments> <keyword right> <algorithm arguments>)
+	)
+	<algorithm body>;
+
+<algorithm arguments> = (<naming>) { ',' (<naming>) };
+<algorithm body> = <keyword body> '{' { <algorithm content> } '}';
+<algorithm content> = <schema definition> | <name binding>
+
+
+
+
+
+
+
