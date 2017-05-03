@@ -14,7 +14,8 @@
 <capital letter> = 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h' | 'i' | 'j' | 'k' | 'l' | 'm' | 'n' | 'o' | 'p' | 'q' | 'r' | 's' | 't' | 'u' | 'v' | 'w' | 'x' | 'y' | 'z';
 <letter> = <small letter> | <capital letter>;
 <glyph> = <letter> | <digit> | '_';
-<symbol> = '~' | '!' | '@' | '#' | '$' | '%' | '^' | '&' | '*' | '-' | '+' | '<' | '>' | '?' | '/' | '|' | '\\';
+<sign> = '~' | '!' | '@' | '#' | '$' | '%' | '^' | '&' | '*' | '-' | '+' | '<' | '>' | '?' | '/' | '|' | '\\';
+<symbol> = <glyph> | <sign>;
 <special symbol> = '.' | ',' | ':' | ';' | '`';
 <round brace> = '(' | ')';
 <figure brace> = '{' | '}';
@@ -30,7 +31,7 @@
 
 
 # naming:
-<identifier> = (<glyph> {<glyph>}) | (<symbol> {<symbol>});
+<identifier> = <symbol> {<symbol>};
 <name> = { '.' } <identifier> { '.' <identifier> };
 <name binder> = <identifier> ':';
 <naming> = <name binder> <entity>;
