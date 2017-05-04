@@ -1,2 +1,9 @@
+# Auto-generated content
+_Build
+_Intermediate
+
+
 # VS 2013
 *.suo
+*.sdf
+*.opensdf
