@@ -11,11 +11,17 @@ namespace Nu
 	{
 		class Entity;
 
+		class Identifier;
+
+		class Marker;
 		class Text;
+		class Declaration;
 		class Assembly;
 
 		class Unit;
 		class Scope;
+
+		class Parser;
 	}
 
 
@@ -37,12 +43,18 @@ namespace Nu
 			virtual ~Entity() override = default;
 		};
 
-		class Name:
+		class Identifier:
 			public Entity
 		{
 		public:
-			inline Name(const Reference<Name>& this_);
-			virtual ~Name() override = default;
+			using Value = String;
+		protected:
+			const Value value;
+		public:
+			inline Identifier(const Reference<Identifier>& this_, const Value& value_);
+			virtual ~Identifier() override = default;
+		public:
+			inline Value GetValue() const;
 		};
 
 		class Marker:
@@ -69,12 +81,12 @@ namespace Nu
 			public Marker
 		{
 		protected:
-			const Reference<Name> name;
+			const Reference<Identifier> identifier;
 		public:
-			inline Declaration(const Reference<Declaration>& this_, const Reference<Name>& name_);
+			inline Declaration(const Reference<Declaration>& this_, const Reference<Identifier>& identifier_);
 			virtual ~Declaration() override = default;
 		public:
-			inline Reference<Name> GetName() const;
+			inline Reference<Identifier> GetIdentifier() const;
 		};
 		class Assembly:
 			public Entity
@@ -103,8 +115,8 @@ namespace Nu
 			public Unit,
 			public Assembly
 		{
-		protected:
-			Vector<Reference<Name>> names;
+		public: // protected: // temporal
+			Vector<Reference<Identifier>> identifiers;
 			Vector<Reference<Unit>> units;
 		public:
 			inline Scope(const Reference<Scope>& this_, const Reference<Scope>& scope_);
@@ -115,7 +127,158 @@ namespace Nu
 			virtual void Add(const Reference<Unit>& unit_);
 			virtual void Add(const Reference<Scope>& scope_); // C++ shit workaround
 		};
+
+		class Parser:
+			public This<Parser>
+		{
+		public:
+			using Source = String;
+			using Iterator = int;
+		public:
+			inline Parser(const Reference<Parser>& this_);
+		protected:
+			inline void ParseScope(const Source& source_, Iterator& it_, const Reference<Scope>& scope_);
+		public:
+			inline Reference<Scope> Parse(const Source& source_);
+		};
 	}
+}
+
+
+bool IsDigit(const char& value_)
+{
+	switch(value_)
+	{
+		case '0':
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+		case '8':
+		case '9':
+			return true;
+		default:
+			return false;
+	}
+}
+bool IsSmallLetter(const char& value_)
+{
+	switch(value_)
+	{
+		case 'a':
+		case 'b':
+		case 'c':
+		case 'd':
+		case 'e':
+		case 'f':
+		case 'g':
+		case 'h':
+		case 'i':
+		case 'j':
+		case 'k':
+		case 'l':
+		case 'm':
+		case 'n':
+		case 'o':
+		case 'p':
+		case 'q':
+		case 'r':
+		case 's':
+		case 't':
+		case 'u':
+		case 'v':
+		case 'w':
+		case 'x':
+		case 'y':
+		case 'z':
+			return true;
+		default:
+			return false;
+	}
+}
+bool IsCapitalLetter(const char& value_)
+{
+	switch(value_)
+	{
+		case 'A':
+		case 'B':
+		case 'C':
+		case 'D':
+		case 'E':
+		case 'F':
+		case 'G':
+		case 'H':
+		case 'I':
+		case 'J':
+		case 'K':
+		case 'L':
+		case 'M':
+		case 'N':
+		case 'O':
+		case 'P':
+		case 'Q':
+		case 'R':
+		case 'S':
+		case 'T':
+		case 'U':
+		case 'V':
+		case 'W':
+		case 'X':
+		case 'Y':
+		case 'Z':
+			return true;
+		default:
+			return false;
+	}
+};
+bool IsLetter(const char& value_)
+{
+	return
+		IsSmallLetter(value_) ||
+		IsCapitalLetter(value_);
+}
+bool IsGlyph(const char& value_)
+{
+	return
+		IsDigit(value_) ||
+		IsLetter(value_) ||
+		(value_ == '_')
+		;
+};
+bool IsSign(const char& value_)
+{
+	switch(value_)
+	{
+		case '~':
+		case '!':
+		case '@':
+		case '#':
+		case '$':
+		case '%':
+		case '^':
+		case '&':
+		case '*':
+		case '-':
+		case '+':
+		case '/':
+		case '|':
+		case '\\':
+		case '<':
+		case '>':
+		case '?':
+			return true;
+		default:
+			return false;
+	}
+};
+bool IsSymbol(const char& value_)
+{
+	return
+		IsGlyph(value_) ||
+		IsSign(value_);
 }
 
 
@@ -141,11 +304,17 @@ inline Nu::NamesDeclarationStage::Entity::Entity(const Reference<Entity>& this_)
 
 #pragma endregion
 
-#pragma region Name
+#pragma region Identifier
 
-inline Nu::NamesDeclarationStage::Name::Name(const Reference<Name>& this_):
-	Entity(this_)
+inline Nu::NamesDeclarationStage::Identifier::Identifier(const Reference<Identifier>& this_, const Value& value_):
+	Entity(this_),
+	value(value_)
 {
+}
+
+inline Nu::NamesDeclarationStage::Identifier::Value Nu::NamesDeclarationStage::Identifier::GetValue() const
+{
+	return value;
 }
 
 #pragma endregion
@@ -176,15 +345,15 @@ inline Nu::NamesDeclarationStage::Text::Value Nu::NamesDeclarationStage::Text::G
 
 #pragma region Declaration
 
-inline Nu::NamesDeclarationStage::Declaration::Declaration(const Reference<Declaration>& this_, const Reference<Name>& name_):
+inline Nu::NamesDeclarationStage::Declaration::Declaration(const Reference<Declaration>& this_, const Reference<Identifier>& identifier_):
 	Marker(this_),
-	name(name_)
+	identifier(identifier_)
 {
 }
 
-inline Nu::Reference<Nu::NamesDeclarationStage::Name> Nu::NamesDeclarationStage::Declaration::GetName() const
+inline Nu::Reference<Nu::NamesDeclarationStage::Identifier> Nu::NamesDeclarationStage::Declaration::GetIdentifier() const
 {
-	return name;
+	return identifier;
 }
 
 #pragma endregion
@@ -235,8 +404,8 @@ void Nu::NamesDeclarationStage::Scope::Add(const Reference<Declaration>& declara
 {
 	Assembly::Add(declaration_);
 
-	auto &name = declaration_->GetName();
-	names.push_back(name);
+	auto &identifier = declaration_->GetIdentifier();
+	identifiers.push_back(identifier);
 }
 void Nu::NamesDeclarationStage::Scope::Add(const Reference<Unit>& unit_)
 {
@@ -251,9 +420,113 @@ void Nu::NamesDeclarationStage::Scope::Add(const Reference<Scope>& scope_)
 
 #pragma endregion
 
+#pragma region Parser
+
+inline Nu::NamesDeclarationStage::Parser::Parser(const Reference<Parser>& this_):
+	This(this_)
+{
+}
+
+inline void Nu::NamesDeclarationStage::Parser::ParseScope(const Source& source_, Iterator& it_, const Reference<Scope>& scope_)
+{
+	while(it_ < static_cast<Iterator>(source_.length()))
+	{
+		auto value = source_[it_];
+
+		if(value == ':')
+		{
+			auto i = it_ > 0
+				? it_ - 1
+				: throw Exception("Illegal \":\"");
+
+			if(IsSymbol(source_[i]))
+			{
+				while(i >= 0 && IsSymbol(source_[i]))
+				{
+					--i;
+				}
+				++i;
+
+				auto identifierValue = source_.substr(i, it_ - i);
+				auto identifier = Make<Identifier>(identifierValue);
+				auto declaration = Make<Declaration>(identifier);
+				scope_->Add(declaration);
+			}
+			else
+			{
+				throw Exception("Illegal \":\"");
+			}
+		}
+		else if(value == '{')
+		{
+			++it_;
+
+			auto scope = Make<Scope>(scope_);
+
+			ParseScope(source_, it_, scope);
+
+			scope_->Add(scope);
+
+			continue;
+		}
+		else if(value == '}')
+		{
+			++it_;
+
+			return;
+		}
+
+		++it_;
+	}
+}
+
+inline Nu::Reference<Nu::NamesDeclarationStage::Scope> Nu::NamesDeclarationStage::Parser::Parse(const Source& source_)
+{
+	auto mainScope = Make<Scope>(nullptr);
+
+	int it = 0;
+
+	ParseScope(source_, it, mainScope);
+
+	return mainScope;
+}
+
 #pragma endregion
 
 #pragma endregion
+
+#pragma endregion
+
+
+void print(const Nu::Reference<Nu::NamesDeclarationStage::Scope>& scope)
+{
+	static int tab = 0;
+
+	for(int t = 0; t < tab; ++t) std::cout << '\t';
+	std::cout << "{" << std::endl;
+
+	++tab;
+
+	for(auto &i : scope->identifiers)
+	{
+		for(int t = 0; t < tab; ++t) std::cout << '\t';
+
+		std::cout << i->GetValue() << std::endl;
+	}
+
+	for(auto &i : scope->units)
+	{
+		if(auto s = Nu::UpCast<Nu::NamesDeclarationStage::Scope>(i))
+		{
+			print(s);
+		}
+	}
+
+	--tab;
+
+	for(int t = 0; t < tab; ++t) std::cout << '\t';
+	std::cout << "}" << std::endl;
+}
 
 
 void main()
@@ -261,11 +534,12 @@ void main()
 	using namespace Nu;
 	using namespace NamesDeclarationStage;
 
+	/*
 	// "a: schema { b: a; }"
 	auto mainScope = Make<Scope>(nullptr); // implicit outer scope
 	{
-		auto name = Make<Name>();
-		auto declaration = Make<Declaration>(name); // representation of "a:"
+		auto identifier = Make<Identifier>();
+		auto declaration = Make<Declaration>(identifier); // representation of "a:"
 		mainScope->Assembly::Add(declaration);
 
 		auto value = "schema";
@@ -274,8 +548,8 @@ void main()
 
 		auto scope = Make<Scope>(mainScope); // representation of "{ b: a; }"
 		{
-			auto nestedName = Make<Name>();
-			auto nestedDeclaration = Make<Declaration>(nestedName); //representation of "b:"
+			auto nestedIdentifier = Make<Identifier>();
+			auto nestedDeclaration = Make<Declaration>(nestedIdentifier); //representation of "b:"
 			scope->Add(nestedDeclaration);
 
 			auto nestedValue = "a;";
@@ -284,6 +558,12 @@ void main()
 		}
 		mainScope->Add(scope);
 	}
+	*/
+
+	auto parser = Make<Parser>();
+	auto scope = parser->Parse("a:{x:y:z:{vasya #pupkin:}}b:");
+
+	print(scope);
 
 	std::system("pause");
 }
