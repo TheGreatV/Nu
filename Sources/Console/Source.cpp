@@ -3,34 +3,51 @@
 #include <../Parser/Parser.hpp>
 
 
-void print(const Nu::Reference<Nu::NamesDeclarationStage::Scope>& scope)
+void print(const Nu::Reference<Nu::NamesDeclarationStage::Marker>& marker)
 {
 	static int tab = 0;
 
-	for(int t = 0; t < tab; ++t) std::cout << '\t';
-	std::cout << "{" << std::endl;
-
-	++tab;
-
-	for(auto &i : scope->identifiers)
+	if(auto scope = Nu::UpCast<Nu::NamesDeclarationStage::Scope>(marker))
 	{
 		for(int t = 0; t < tab; ++t) std::cout << '\t';
+		std::cout << "{" << std::endl;
 
-		std::cout << i->GetValue() << std::endl;
-	}
+		++tab;
 
-	for(auto &i : scope->units)
-	{
-		if(auto s = Nu::UpCast<Nu::NamesDeclarationStage::Scope>(i))
+		for(auto &marker : scope->GetMarkers())
 		{
-			print(s);
+			print(marker);
 		}
+		/*for(auto &i : scope->identifiers)
+		{
+			for(int t = 0; t < tab; ++t) std::cout << '\t';
+
+			std::cout << i->GetValue() << std::endl;
+		}
+
+		for(auto &i : scope->units)
+		{
+			if(auto s = Nu::UpCast<Nu::NamesDeclarationStage::Scope>(i))
+			{
+				print(s);
+			}
+		}*/
+
+		--tab;
+
+		for(int t = 0; t < tab; ++t) std::cout << '\t';
+		std::cout << "}" << std::endl;
 	}
-
-	--tab;
-
-	for(int t = 0; t < tab; ++t) std::cout << '\t';
-	std::cout << "}" << std::endl;
+	else if(auto text = Nu::UpCast<Nu::NamesDeclarationStage::Text>(marker))
+	{
+		for(int t = 0; t < tab; ++t) std::cout << '\t';
+		std::cout << '"' << text->GetValue() << '"' << std::endl;
+	}
+	else if(auto declaration = Nu::UpCast<Nu::NamesDeclarationStage::Declaration>(marker))
+	{
+		for(int t = 0; t < tab; ++t) std::cout << '\t';
+		std::cout << '<' << declaration->GetIdentifier()->GetValue() << '>' << std::endl;
+	}
 }
 
 

@@ -95,13 +95,16 @@ namespace Nu
 		class Assembly:
 			public Entity
 		{
+		public:
+			using Markers = Vector<Reference<Marker>>;
 		protected:
-			Vector<Reference<Marker>> markers;
+			 Markers markers;
 		public:
 			inline Assembly(const Reference<Assembly>& this_);
 			virtual ~Assembly() override = default;
 		public:
 			virtual void Add(const Reference<Marker>& marker_);
+			inline const Markers& GetMarkers() const;
 		};
 
 		class Unit:
@@ -404,6 +407,10 @@ void Nu::NamesDeclarationStage::Assembly::Add(const Reference<Marker>& marker_)
 {
 	markers.push_back(marker_);
 }
+inline const Nu::NamesDeclarationStage::Assembly::Markers& Nu::NamesDeclarationStage::Assembly::GetMarkers() const
+{
+	return markers;
+}
 
 #pragma endregion
 
@@ -492,6 +499,8 @@ inline void Nu::NamesDeclarationStage::Parser::ParseScope(const Source& source_,
 				textBegin = it_ + 1;
 				if(!rawText.empty())
 				{
+					auto text = Make<Text>(rawText);
+					scope_->Add(text);
 					// std::cout << rawText << std::endl;
 				}
 
@@ -511,6 +520,8 @@ inline void Nu::NamesDeclarationStage::Parser::ParseScope(const Source& source_,
 			textBegin = it_ + 1;
 			if(!rawText.empty())
 			{
+				auto text = Make<Text>(rawText);
+				scope_->Add(text);
 				// std::cout << rawText << std::endl;
 			}
 
@@ -532,6 +543,8 @@ inline void Nu::NamesDeclarationStage::Parser::ParseScope(const Source& source_,
 			textBegin = it_ + 1;
 			if(!rawText.empty())
 			{
+				auto text = Make<Text>(rawText);
+				scope_->Add(text);
 				// std::cout << rawText << std::endl;
 			}
 
@@ -541,6 +554,15 @@ inline void Nu::NamesDeclarationStage::Parser::ParseScope(const Source& source_,
 		}
 
 		++it_;
+	}
+
+	auto rawText = RemoveWhitespaces(source_.substr(textBegin, it_ - textBegin));
+	textBegin = it_ + 1;
+	if(!rawText.empty())
+	{
+		auto text = Make<Text>(rawText);
+		scope_->Add(text);
+		// std::cout << rawText << std::endl;
 	}
 }
 
