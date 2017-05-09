@@ -19,13 +19,39 @@
 
 #pragma region Marker
 
+#pragma region Performer
+
+void Nu::NamesDeclarationStage::Marker::Performer::Perform(const Reference<Text>& marker_)
+{
+}
+void Nu::NamesDeclarationStage::Marker::Performer::Perform(const Reference<Declaration>& marker_)
+{
+}
+
+#pragma endregion
+
+
+void Nu::NamesDeclarationStage::Marker::Accept(const Reference<Performer>& performer_)
+{
+}
+
 #pragma endregion
 
 #pragma region Text
 
+void Nu::NamesDeclarationStage::Text::Accept(const Reference<Performer>& performer_)
+{
+	performer_->Perform(GetThis<Text>());
+}
+
 #pragma endregion
 
 #pragma region Declaration
+
+void Nu::NamesDeclarationStage::Declaration::Accept(const Reference<Performer>& performer_)
+{
+	performer_->Perform(GetThis<Declaration>());
+}
 
 #pragma endregion
 

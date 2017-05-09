@@ -9,8 +9,6 @@
 
 namespace Nu
 {
-	class Entity;
-
 	namespace NamesDeclarationStage
 	{
 		class Entity;
@@ -26,19 +24,8 @@ namespace Nu
 		class Scope;
 
 		class Parser;
-	}
 
 
-	class Entity:
-		public This<Entity>
-	{
-	public:
-		inline Entity(const Reference<Entity>& this_);
-		virtual ~Entity() = default;
-	};
-
-	namespace NamesDeclarationStage
-	{
 		class Entity:
 			public Nu::Entity
 		{
@@ -65,8 +52,23 @@ namespace Nu
 			public Entity
 		{
 		public:
+			class Performer;
+		public:
 			inline Marker(const Reference<Marker>& this_);
 			virtual ~Marker() override = default;
+		public:
+			virtual void Accept(const Reference<Performer>& performer_);
+		};
+		class Marker::Performer:
+			public Entity
+		{
+		public:
+			inline Performer(const Reference<Entity>& this_);
+			virtual ~Performer() = default;
+		public:
+			inline void Perform(const Reference<Marker>& marker_);
+			virtual void Perform(const Reference<Text>& marker_);
+			virtual void Perform(const Reference<Declaration>& marker_);
 		};
 		class Text:
 			public Marker
@@ -80,6 +82,8 @@ namespace Nu
 			virtual ~Text() override = default;
 		public:
 			inline Value GetValue() const;
+		public:
+			virtual void Accept(const Reference<Performer>& performer_) override;
 		};
 		class Declaration:
 			public Marker
@@ -91,6 +95,8 @@ namespace Nu
 			virtual ~Declaration() override = default;
 		public:
 			inline Reference<Identifier> GetIdentifier() const;
+		public:
+			virtual void Accept(const Reference<Performer>& performer_) override;
 		};
 		class Assembly:
 			public Entity
@@ -166,15 +172,6 @@ namespace Nu
 
 #pragma region Nu
 
-#pragma region Entity
-
-inline Nu::Entity::Entity(const Reference<Entity>& this_):
-This(this_)
-{
-}
-
-#pragma endregion
-
 #pragma region NamesDeclarationStage
 
 #pragma region Entity
@@ -202,6 +199,21 @@ inline Nu::NamesDeclarationStage::Identifier::Value Nu::NamesDeclarationStage::I
 #pragma endregion
 
 #pragma region Marker
+
+#pragma region Performer
+
+inline Nu::NamesDeclarationStage::Marker::Performer::Performer(const Reference<Entity>& this_):
+	Entity(this_)
+{
+}
+
+inline void Nu::NamesDeclarationStage::Marker::Performer::Perform(const Reference<Marker>& marker_)
+{
+	marker_->Accept(GetThis<Performer>());
+}
+
+#pragma endregion
+
 
 inline Nu::NamesDeclarationStage::Marker::Marker(const Reference<Marker>& this_):
 Entity(this_)
