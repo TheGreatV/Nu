@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include <../Parser/Parser.hpp>
+#include <../Lexer/Lexer.hpp>
 
 
 void print(const Nu::Reference<Nu::NamesDeclarationStage::Marker>& marker)
