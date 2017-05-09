@@ -148,174 +148,19 @@ namespace Nu
 		public:
 			inline Reference<Scope> Parse(const Source& source_);
 		};
-	}
-}
 
 
-bool IsWhitespace(const char& value_)
-{
-	switch(value_)
-	{
-		case ' ':
-		case '\t':
-		case '\n':
-			return true;
-		default:
-			return false;
-	}
-}
-bool IsDigit(const char& value_)
-{
-	switch(value_)
-	{
-		case '0':
-		case '1':
-		case '2':
-		case '3':
-		case '4':
-		case '5':
-		case '6':
-		case '7':
-		case '8':
-		case '9':
-			return true;
-		default:
-			return false;
-	}
-}
-bool IsSmallLetter(const char& value_)
-{
-	switch(value_)
-	{
-		case 'a':
-		case 'b':
-		case 'c':
-		case 'd':
-		case 'e':
-		case 'f':
-		case 'g':
-		case 'h':
-		case 'i':
-		case 'j':
-		case 'k':
-		case 'l':
-		case 'm':
-		case 'n':
-		case 'o':
-		case 'p':
-		case 'q':
-		case 'r':
-		case 's':
-		case 't':
-		case 'u':
-		case 'v':
-		case 'w':
-		case 'x':
-		case 'y':
-		case 'z':
-			return true;
-		default:
-			return false;
-	}
-}
-bool IsCapitalLetter(const char& value_)
-{
-	switch(value_)
-	{
-		case 'A':
-		case 'B':
-		case 'C':
-		case 'D':
-		case 'E':
-		case 'F':
-		case 'G':
-		case 'H':
-		case 'I':
-		case 'J':
-		case 'K':
-		case 'L':
-		case 'M':
-		case 'N':
-		case 'O':
-		case 'P':
-		case 'Q':
-		case 'R':
-		case 'S':
-		case 'T':
-		case 'U':
-		case 'V':
-		case 'W':
-		case 'X':
-		case 'Y':
-		case 'Z':
-			return true;
-		default:
-			return false;
-	}
-};
-bool IsLetter(const char& value_)
-{
-	return
-		IsSmallLetter(value_) ||
-		IsCapitalLetter(value_);
-}
-bool IsGlyph(const char& value_)
-{
-	return
-		IsDigit(value_) ||
-		IsLetter(value_) ||
-		(value_ == '_')
-		;
-};
-bool IsSign(const char& value_)
-{
-	switch(value_)
-	{
-		case '~':
-		case '!':
-		case '@':
-		case '#':
-		case '$':
-		case '%':
-		case '^':
-		case '&':
-		case '*':
-		case '-':
-		case '+':
-		case '/':
-		case '|':
-		case '\\':
-		case '<':
-		case '>':
-		case '?':
-			return true;
-		default:
-			return false;
-	}
-};
-bool IsSymbol(const char& value_)
-{
-	return
-		IsGlyph(value_) ||
-		IsSign(value_);
-}
+		bool IsWhitespace(const char& value_);
+		bool IsDigit(const char& value_);
+		bool IsSmallLetter(const char& value_);
+		bool IsCapitalLetter(const char& value_);
+		bool IsLetter(const char& value_);
+		bool IsGlyph(const char& value_);
+		bool IsSign(const char& value_);
+		bool IsSymbol(const char& value_);
 
-
-Nu::String RemoveWhitespaces(const Nu::String& source_)
-{
-	auto source = source_;
-
-	while(!source.empty() && IsWhitespace(source.front()))
-	{
-		source.erase(source.begin());
+		String RemoveWhitespaces(const Nu::String& source_);
 	}
-
-	while(!source.empty() && IsWhitespace(source.back()))
-	{
-		source.pop_back();
-	}
-
-	return source;
 }
 
 
@@ -335,7 +180,7 @@ This(this_)
 #pragma region Entity
 
 inline Nu::NamesDeclarationStage::Entity::Entity(const Reference<Entity>& this_):
-Nu::Entity(this_)
+	Nu::Entity(this_)
 {
 }
 
@@ -403,10 +248,6 @@ markers()
 {
 }
 
-void Nu::NamesDeclarationStage::Assembly::Add(const Reference<Marker>& marker_)
-{
-	markers.push_back(marker_);
-}
 inline const Nu::NamesDeclarationStage::Assembly::Markers& Nu::NamesDeclarationStage::Assembly::GetMarkers() const
 {
 	return markers;
@@ -435,28 +276,6 @@ inline Nu::NamesDeclarationStage::Scope::Scope(const Reference<Scope>& this_, co
 Unit(this_, scope_),
 Assembly(this_)
 {
-}
-
-void Nu::NamesDeclarationStage::Scope::Add(const Reference<Marker>& marker_)
-{
-	Assembly::Add(marker_);
-}
-void Nu::NamesDeclarationStage::Scope::Add(const Reference<Declaration>& declaration_)
-{
-	Assembly::Add(declaration_);
-
-	auto &identifier = declaration_->GetIdentifier();
-	identifiers.push_back(identifier);
-}
-void Nu::NamesDeclarationStage::Scope::Add(const Reference<Unit>& unit_)
-{
-	Assembly::Add(unit_);
-
-	units.push_back(unit_);
-}
-void Nu::NamesDeclarationStage::Scope::Add(const Reference<Scope>& scope_)
-{
-	Add(Cast<Unit>(scope_));
 }
 
 #pragma endregion
