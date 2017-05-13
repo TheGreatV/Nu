@@ -1,10 +1,14 @@
-#include <iostream>
+﻿#include <iostream>
+#include <fstream>
 
+#include <../Cleaner/Cleaner.hpp>
 #include <../Parser/Parser.hpp>
 #include <../Lexer/Lexer.hpp>
+using namespace Nu;
+using namespace NamesDeclarationStage;
 
 
-void print(const Nu::Reference<Nu::NamesDeclarationStage::Marker>& marker)
+void print(const Reference<Marker>& marker)
 {
 	static int tab = 0;
 
@@ -54,55 +58,26 @@ void print(const Nu::Reference<Nu::NamesDeclarationStage::Marker>& marker)
 
 void main()
 {
-	using namespace Nu;
-	using namespace NamesDeclarationStage;
-
-	/*
-	// "a: schema { b: a; }"
-	auto mainScope = Make<Scope>(nullptr); // implicit outer scope
+	Parser::Source source;
 	{
-		auto identifier = Make<Identifier>();
-		auto declaration = Make<Declaration>(identifier); // representation of "a:"
-		mainScope->Assembly::Add(declaration);
-
-		auto value = "schema";
-		auto text = Make<Text>(value); // representation of "schema"
-		mainScope->Add(text);
-
-		auto scope = Make<Scope>(mainScope); // representation of "{ b: a; }"
-		{
-			auto nestedIdentifier = Make<Identifier>();
-			auto nestedDeclaration = Make<Declaration>(nestedIdentifier); //representation of "b:"
-			scope->Add(nestedDeclaration);
-
-			auto nestedValue = "a;";
-			auto nestedText = Make<Text>(nestedValue); // representation of "a;"
-			scope->Add(nestedText);
-		}
-		mainScope->Add(scope);
+		std::ifstream file(L"../../../../Media/Source.ν"); // relative to project (.vcxproj)
+		std::getline(file, source, '\0');
+		file.close();
 	}
-	*/
 
-	// auto source = "a:{x:y:z:{vasya #pupkin:}}b:";
-auto source =
-"\
-MySchema : schema\n\
-{\n\
-	algorithm none ()\n\
-	body\n\
-	{\n\
-	}\n\
-}\n\
-myInstance: make MySchema;\n\
-";
-	// auto source = "{{}}";
-	std::cout << source << std::endl;
+	std::cout << "source:" << std::endl << source << std::endl;
+	
+	auto cleaner = Make<Cleaning::Cleaner>();
+	auto cleanCode = cleaner->Parse(source);
+
+	std::cout << "clean:" << std::endl << cleanCode << std::endl;
 
 	auto parser = Make<Parser>();
-	auto scope = parser->Parse(source);
-
+	auto scope = parser->Parse(cleanCode);
+	
+	std::cout << "structure:" << std::endl;
 	print(scope);
-
+	
 	std::system("pause");
 }
 
