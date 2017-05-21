@@ -27,6 +27,9 @@ void Nu::NamesDeclarationStage::Marker::Performer::Perform(const Reference<Text>
 void Nu::NamesDeclarationStage::Marker::Performer::Perform(const Reference<Declaration>& marker_)
 {
 }
+void Nu::NamesDeclarationStage::Marker::Performer::Perform(const Reference<Scope>& marker_)
+{
+}
 
 #pragma endregion
 
@@ -90,6 +93,11 @@ void Nu::NamesDeclarationStage::Scope::Add(const Reference<Unit>& unit_)
 void Nu::NamesDeclarationStage::Scope::Add(const Reference<Scope>& scope_)
 {
 	Add(Cast<Unit>(scope_));
+}
+
+void Nu::NamesDeclarationStage::Scope::Accept(const Reference<Performer>& performer_)
+{
+	performer_->Perform(Unit::GetThis<Scope>());
 }
 
 #pragma endregion
@@ -247,6 +255,20 @@ bool Nu::NamesDeclarationStage::IsSymbol(const char& value_)
 	return
 		IsGlyph(value_) ||
 		IsSign(value_);
+}
+bool Nu::NamesDeclarationStage::IsOpeningBrace(const char& value_)
+{
+	return
+		value_ == '{' ||
+		value_ == '(' ||
+		value_ == '[';
+}
+bool Nu::NamesDeclarationStage::IsClosingBrace(const char& value_)
+{
+	return
+		value_ == '}' ||
+		value_ == ')' ||
+		value_ == ']';
 }
 
 

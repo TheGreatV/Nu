@@ -5,17 +5,23 @@
 #include <../Parser/Parser.hpp>
 #include <../Lexer/Lexer.hpp>
 using namespace Nu;
-using namespace NamesDeclarationStage;
 
 
-void print(const Reference<Marker>& marker)
+void print(const Reference<NamesDeclarationStage::Marker>& marker)
 {
 	static int tab = 0;
 
 	if(auto scope = Nu::UpCast<Nu::NamesDeclarationStage::Scope>(marker))
 	{
 		for(int t = 0; t < tab; ++t) std::cout << '\t';
-		std::cout << "{" << std::endl;
+
+		auto openingBrace =
+			scope->opening == NamesDeclarationStage::Scope::BraceType::Round ? "(" :
+			scope->opening == NamesDeclarationStage::Scope::BraceType::Figure ? "{" :
+			scope->opening == NamesDeclarationStage::Scope::BraceType::Square ? "[" :
+			throw Exception();
+
+		std::cout << openingBrace << std::endl;
 
 		++tab;
 
@@ -41,7 +47,14 @@ void print(const Reference<Marker>& marker)
 		--tab;
 
 		for(int t = 0; t < tab; ++t) std::cout << '\t';
-		std::cout << "}" << std::endl;
+
+		auto closingBrace =
+			scope->closing == NamesDeclarationStage::Scope::BraceType::Round ? ")" :
+			scope->closing == NamesDeclarationStage::Scope::BraceType::Figure ? "}" :
+			scope->closing == NamesDeclarationStage::Scope::BraceType::Square ? "]" :
+			throw Exception();
+
+		std::cout << closingBrace << std::endl;
 	}
 	else if(auto text = Nu::UpCast<Nu::NamesDeclarationStage::Text>(marker))
 	{
@@ -58,26 +71,29 @@ void print(const Reference<Marker>& marker)
 
 void main()
 {
-	Parser::Source source;
+	NamesDeclarationStage::Parser::Source source;
 	{
 		std::ifstream file(L"../../../../Media/Source.ν"); // relative to project (.vcxproj)
 		std::getline(file, source, '\0');
 		file.close();
 	}
 
-	std::cout << "source:" << std::endl << source << std::endl;
+	// std::cout << "source:" << std::endl << source << std::endl;
 	
 	auto cleaner = Make<Cleaning::Cleaner>();
 	auto cleanCode = cleaner->Parse(source);
 
-	std::cout << "clean:" << std::endl << cleanCode << std::endl;
+	// std::cout << "clean:" << std::endl << cleanCode << std::endl;
 
-	auto parser = Make<Parser>();
-	auto scope = parser->Parse(cleanCode);
+	auto parser = Make<NamesDeclarationStage::Parser>();
+	auto nameScope = parser->Parse(cleanCode);
 	
 	std::cout << "structure:" << std::endl;
-	print(scope);
+	print(nameScope);
 	
+	auto lexer = Make<Lexing::Lexer>();
+	auto tokenScope = lexer->Parse(nameScope);
+
 	std::system("pause");
 }
 

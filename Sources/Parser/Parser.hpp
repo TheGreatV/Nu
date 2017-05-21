@@ -59,6 +59,7 @@ namespace Nu
 		public:
 			virtual void Accept(const Reference<Performer>& performer_);
 		};
+#pragma region Marker::Performer
 		class Marker::Performer:
 			public Entity
 		{
@@ -69,7 +70,9 @@ namespace Nu
 			inline void Perform(const Reference<Marker>& marker_);
 			virtual void Perform(const Reference<Text>& marker_);
 			virtual void Perform(const Reference<Declaration>& marker_);
+			virtual void Perform(const Reference<Scope>& marker_);
 		};
+#pragma endregion
 		class Text:
 			public Marker
 		{
@@ -98,16 +101,15 @@ namespace Nu
 		public:
 			virtual void Accept(const Reference<Performer>& performer_) override;
 		};
-		class Assembly:
-			public Entity
+		class Assembly
 		{
 		public:
 			using Markers = Vector<Reference<Marker>>;
 		protected:
 			 Markers markers;
 		public:
-			inline Assembly(const Reference<Assembly>& this_);
-			virtual ~Assembly() override = default;
+			inline Assembly() = default;
+			virtual ~Assembly() = default;
 		public:
 			virtual void Add(const Reference<Marker>& marker_);
 			inline const Markers& GetMarkers() const;
@@ -128,9 +130,21 @@ namespace Nu
 			public Unit,
 			public Assembly
 		{
-		public: // protected: // temporal
-			Vector<Reference<Identifier>> identifiers;
+		public:
+			enum class BraceType
+			{
+				None, // Not in use
+				Round,
+				Figure,
+				Square,
+			};
+			using Identifiers = Vector<Reference<Identifier>>;
+		protected:
+			Identifiers identifiers;
 			Vector<Reference<Unit>> units;
+		public:
+			BraceType opening = BraceType::None;
+			BraceType closing = BraceType::None;
 		public:
 			inline Scope(const Reference<Scope>& this_, const Reference<Scope>& scope_);
 			virtual ~Scope() override = default;
@@ -139,6 +153,9 @@ namespace Nu
 			virtual void Add(const Reference<Declaration>& declaration_);
 			virtual void Add(const Reference<Unit>& unit_);
 			virtual void Add(const Reference<Scope>& scope_); // C++ shit workaround
+			inline Identifiers GetIdentifiers() const;
+		public:
+			virtual void Accept(const Reference<Performer>& performer_) override;
 		};
 
 		class Parser:
@@ -164,6 +181,8 @@ namespace Nu
 		bool IsGlyph(const char& value_);
 		bool IsSign(const char& value_);
 		bool IsSymbol(const char& value_);
+		bool IsOpeningBrace(const char& value_);
+		bool IsClosingBrace(const char& value_);
 
 		String RemoveWhitespaces(const Nu::String& source_);
 	}
@@ -254,12 +273,6 @@ inline Nu::Reference<Nu::NamesDeclarationStage::Identifier> Nu::NamesDeclaration
 
 #pragma region Assembly
 
-inline Nu::NamesDeclarationStage::Assembly::Assembly(const Reference<Assembly>& this_):
-Entity(this_),
-markers()
-{
-}
-
 inline const Nu::NamesDeclarationStage::Assembly::Markers& Nu::NamesDeclarationStage::Assembly::GetMarkers() const
 {
 	return markers;
@@ -285,9 +298,14 @@ inline Nu::Reference<Nu::NamesDeclarationStage::Scope> Nu::NamesDeclarationStage
 #pragma region Scope
 
 inline Nu::NamesDeclarationStage::Scope::Scope(const Reference<Scope>& this_, const Reference<Scope>& scope_):
-Unit(this_, scope_),
-Assembly(this_)
+	Unit(this_, scope_),
+	Assembly()
 {
+}
+
+inline Nu::NamesDeclarationStage::Scope::Identifiers Nu::NamesDeclarationStage::Scope::GetIdentifiers() const
+{
+	return identifiers;
 }
 
 #pragma endregion
@@ -345,7 +363,7 @@ inline void Nu::NamesDeclarationStage::Parser::ParseScope(const Source& source_,
 				throw Exception("Illegal \":\"");
 			}
 		}
-		else if(value == '{')
+		else if(IsOpeningBrace(value))
 		{
 			auto rawText = RemoveWhitespaces(source_.substr(textBegin, it_ - textBegin));
 			textBegin = it_ + 1;
@@ -360,6 +378,12 @@ inline void Nu::NamesDeclarationStage::Parser::ParseScope(const Source& source_,
 
 			auto scope = Make<Scope>(scope_);
 
+			scope->opening =
+				value == '(' ? Scope::BraceType::Round :
+				value == '{' ? Scope::BraceType::Figure :
+				value == '[' ? Scope::BraceType::Square :
+				throw Exception("Invalid brace type");
+
 			ParseScope(source_, it_, scope);
 
 			textBegin = it_;
@@ -368,8 +392,14 @@ inline void Nu::NamesDeclarationStage::Parser::ParseScope(const Source& source_,
 
 			continue;
 		}
-		else if(value == '}')
+		else if(IsClosingBrace(value))
 		{
+			scope_->closing =
+				value == ')' ? Scope::BraceType::Round :
+				value == '}' ? Scope::BraceType::Figure :
+				value == ']' ? Scope::BraceType::Square :
+				throw Exception("Invalid brace type");
+
 			auto rawText = RemoveWhitespaces(source_.substr(textBegin, it_ - textBegin));
 			textBegin = it_ + 1;
 			if(!rawText.empty())
@@ -400,6 +430,8 @@ inline void Nu::NamesDeclarationStage::Parser::ParseScope(const Source& source_,
 inline Nu::Reference<Nu::NamesDeclarationStage::Scope> Nu::NamesDeclarationStage::Parser::Parse(const Source& source_)
 {
 	auto mainScope = Make<Scope>(nullptr);
+	mainScope->opening = Scope::BraceType::Figure;
+	mainScope->closing = Scope::BraceType::Figure;
 
 	int it = 0;
 
