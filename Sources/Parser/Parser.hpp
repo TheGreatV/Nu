@@ -64,7 +64,7 @@ namespace Nu
 			public Entity
 		{
 		public:
-			inline Performer(const Reference<Entity>& this_);
+			inline Performer(const Reference<Performer>& this_);
 			virtual ~Performer() = default;
 		public:
 			inline void Perform(const Reference<Marker>& marker_);
@@ -221,7 +221,7 @@ inline Nu::NamesDeclarationStage::Identifier::Value Nu::NamesDeclarationStage::I
 
 #pragma region Performer
 
-inline Nu::NamesDeclarationStage::Marker::Performer::Performer(const Reference<Entity>& this_):
+inline Nu::NamesDeclarationStage::Marker::Performer::Performer(const Reference<Performer>& this_):
 	Entity(this_)
 {
 }

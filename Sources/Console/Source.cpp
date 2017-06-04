@@ -68,6 +68,50 @@ void print(const Reference<NamesDeclarationStage::Marker>& marker)
 	}
 }
 
+void print(const Reference<Lexing::Token>& token)
+{
+	static int tab = 0;
+
+	if(auto scope = Nu::UpCast<Nu::Lexing::Scope>(token))
+	{
+		if(auto space = UpCast<Nu::Lexing::Space>(scope))
+		{
+			for(int t = 0; t < tab; ++t) std::cout << '\t';
+			std::cout << "(space)" << std::endl;
+		}
+		else
+		{
+			for(int t = 0; t < tab; ++t) std::cout << '\t';
+			std::cout << "(scope)" << std::endl;
+		}
+
+		for(int t = 0; t < tab; ++t) std::cout << '\t';
+		std::cout << '{' << std::endl;
+
+		++tab;
+
+		for(auto &token : scope->GetTokens())
+		{
+			print(token);
+		}
+
+		--tab;
+
+		for(int t = 0; t < tab; ++t) std::cout << '\t';
+
+		std::cout << '}' << std::endl;
+	}
+	else if(auto sourceText = Nu::UpCast<Nu::Lexing::Source>(token))
+	{
+		for(int t = 0; t < tab; ++t) std::cout << '\t';
+		std::cout << '"' << sourceText->GetValue() << '"' << std::endl;
+	}
+	// else if(auto declaration = Nu::UpCast<Nu::Lexing::Declaration>(token))
+	// {
+	// 	for(int t = 0; t < tab; ++t) std::cout << '\t';
+	// 	std::cout << '<' << declaration->GetIdentifier()->GetName() << '>' << ':' << std::endl;
+	// }
+}
 
 void main()
 {
@@ -93,6 +137,9 @@ void main()
 	
 	auto lexer = Make<Lexing::Lexer>();
 	auto tokenScope = lexer->Parse(nameScope);
+
+	std::cout << "tokens:" << std::endl;
+	print(Cast<Lexing::Scope>(tokenScope));
 
 	std::system("pause");
 }

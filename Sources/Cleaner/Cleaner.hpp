@@ -97,77 +97,7 @@ inline Nu::Cleaning::Cleaner::Content Nu::Cleaning::Cleaner::Parse(const Content
 		throw Exception("Invalid number of comment block closings");
 	}
 
-	/*Size nesting = 0;
-	Size i = 0;
-	Size l;
-
-	while(i < source.length())
-	{
-		i = source.find(COMMENT_BEGIN, i);
-
-		if(i < source.length())
-		{
-			if(nesting == 0)
-			{
-				l = i;
-			}
-
-			++nesting;
-
-			auto j = source.find(COMMENT_END, i + 1);
-			auto i2 = source.find(COMMENT_BEGIN, i + 1);
-
-			if(j < source.length())
-			{
-				if(i2 < source.length())
-				{
-					if(j < i2)
-					{
-						--nesting; // 'nesting' at least > 0 here
-						// TODO: cut content
-					}
-					else
-					{
-						i = i + 1;
-						continue;
-					}
-				}
-				else
-				{
-					--nesting; // 'nesting' at least > 0 here
-
-					if(nesting == 0)
-					{
-						auto k = j + COMMENT_END.size();
-						source =
-							source.substr(0, l) + 
-							source.substr(k, source.size() - k);
-						i = l;
-						break;
-					}
-					else
-					{
-						throw Exception("Not enough comment block closings");
-					}
-				}
-			}
-			else
-			{
-				throw Exception("Not enclosed comment");
-			}
-		}
-		else
-		{
-			if(nesting == 0)
-			{
-				break;
-			}
-			else
-			{
-				throw Exception("Invalid count of comment blocks closing");
-			}
-		}
-	}*/
+	source = std::regex_replace(source, std::regex("\\s+"), " ");
 
 	return Move(source);
 }
