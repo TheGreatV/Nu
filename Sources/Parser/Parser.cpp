@@ -27,7 +27,13 @@ void Nu::NamesDeclarationStage::Marker::Performer::Perform(const Reference<Text>
 void Nu::NamesDeclarationStage::Marker::Performer::Perform(const Reference<Declaration>& marker_)
 {
 }
+void Nu::NamesDeclarationStage::Marker::Performer::Perform(const Reference<SpecialSymbol>& marker_)
+{
+}
 void Nu::NamesDeclarationStage::Marker::Performer::Perform(const Reference<Scope>& marker_)
+{
+}
+void Nu::NamesDeclarationStage::Marker::Performer::Perform(const Reference<Root>& marker_)
 {
 }
 
@@ -54,6 +60,15 @@ void Nu::NamesDeclarationStage::Text::Accept(const Reference<Performer>& perform
 void Nu::NamesDeclarationStage::Declaration::Accept(const Reference<Performer>& performer_)
 {
 	performer_->Perform(GetThis<Declaration>());
+}
+
+#pragma endregion
+
+#pragma region SpecialSymbol
+
+void Nu::NamesDeclarationStage::SpecialSymbol::Accept(const Reference<Performer>& performer_)
+{
+	performer_->Perform(GetThis<SpecialSymbol>());
 }
 
 #pragma endregion
@@ -98,6 +113,15 @@ void Nu::NamesDeclarationStage::Scope::Add(const Reference<Scope>& scope_)
 void Nu::NamesDeclarationStage::Scope::Accept(const Reference<Performer>& performer_)
 {
 	performer_->Perform(Unit::GetThis<Scope>());
+}
+
+#pragma endregion
+
+#pragma region Root
+
+void Nu::NamesDeclarationStage::Root::Accept(const Reference<Performer>& performer_)
+{
+	performer_->Perform(Unit::GetThis<Root>());
 }
 
 #pragma endregion

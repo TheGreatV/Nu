@@ -14,14 +14,14 @@ namespace Nu
 		class Entity;
 
 		class Identifier;
-
 		class Marker;
 		class Text;
 		class Declaration;
 		class Assembly;
-
+		class SpecialSymbol;
 		class Unit;
 		class Scope;
+		class Root;
 
 		class Parser;
 
@@ -47,7 +47,6 @@ namespace Nu
 		public:
 			inline Value GetValue() const;
 		};
-
 		class Marker:
 			public Entity
 		{
@@ -70,7 +69,9 @@ namespace Nu
 			inline void Perform(const Reference<Marker>& marker_);
 			virtual void Perform(const Reference<Text>& marker_);
 			virtual void Perform(const Reference<Declaration>& marker_);
+			virtual void Perform(const Reference<SpecialSymbol>& marker_);
 			virtual void Perform(const Reference<Scope>& marker_);
+			virtual void Perform(const Reference<Root>& marker_);
 		};
 #pragma endregion
 		class Text:
@@ -114,7 +115,35 @@ namespace Nu
 			virtual void Add(const Reference<Marker>& marker_);
 			inline const Markers& GetMarkers() const;
 		};
+		class SpecialSymbol:
+			public Marker
+		{
+		public:
+			enum class Type
+			{
+				AnyValue,
 
+				Dot,
+				Comma,
+				Semicolon,
+			};
+		protected:
+			const Type type;
+		public:
+			inline SpecialSymbol(const Reference<SpecialSymbol>& this_, const Type& type_):
+				Marker(this_),
+				type(type_)
+			{
+			}
+			virtual ~SpecialSymbol() override = default;
+		public:
+			inline Type GetType() const
+			{
+				return type;
+			}
+		public:
+			virtual void Accept(const Reference<Performer>& performer_) override;
+		};
 		class Unit:
 			public Marker
 		{
@@ -157,6 +186,15 @@ namespace Nu
 		public:
 			virtual void Accept(const Reference<Performer>& performer_) override;
 		};
+		class Root:
+			public Scope
+		{
+		public:
+			inline Root(const Reference<Root>& this_, const Reference<Scope>& scope_);
+			virtual ~Root() override = default;
+		public:
+			virtual void Accept(const Reference<Performer>& performer_) override;
+		};
 
 		class Parser:
 			public This<Parser>
@@ -169,7 +207,7 @@ namespace Nu
 		protected:
 			inline void ParseScope(const Source& source_, Iterator& it_, const Reference<Scope>& scope_);
 		public:
-			inline Reference<Scope> Parse(const Source& source_);
+			inline Reference<Root> Parse(const Source& source_);
 		};
 
 
@@ -310,6 +348,15 @@ inline Nu::NamesDeclarationStage::Scope::Identifiers Nu::NamesDeclarationStage::
 
 #pragma endregion
 
+#pragma region Root
+
+inline Nu::NamesDeclarationStage::Root::Root(const Reference<Root>& this_, const Reference<Scope>& scope_):
+	Scope(this_, scope_)
+{
+}
+
+#pragma endregion
+
 #pragma region Parser
 
 inline Nu::NamesDeclarationStage::Parser::Parser(const Reference<Parser>& this_):
@@ -321,11 +368,131 @@ inline void Nu::NamesDeclarationStage::Parser::ParseScope(const Source& source_,
 {
 	Iterator textBegin = it_;
 
+	auto skipWhitespaces = [&]()
+	{
+		while(it_ < static_cast<Iterator>(source_.size()) && IsWhitespace(source_[it_]))
+		{
+			++it_;
+		}
+	};
+	auto skipSymbols = [&]()
+	{
+		while(it_ < static_cast<Iterator>(source_.size()) && IsSymbol(source_[it_]))
+		{
+			++it_;
+		}
+	};
+
+	while(it_ < static_cast<Iterator>(source_.size()))
+	{
+		skipWhitespaces();
+
+		if(it_ < static_cast<Iterator>(source_.size()))
+		{
+			auto value = source_[it_];
+
+			if(value == '.')
+			{
+				++it_;
+
+				auto marker = Make<SpecialSymbol>(SpecialSymbol::Type::Dot);
+				scope_->Add(marker);
+			}
+			else if(value == ',')
+			{
+				++it_;
+
+				auto marker = Make<SpecialSymbol>(SpecialSymbol::Type::Comma);
+				scope_->Add(marker);
+			}
+			else if(value == ';')
+			{
+				++it_;
+
+				auto marker = Make<SpecialSymbol>(SpecialSymbol::Type::Semicolon);
+				scope_->Add(marker);
+			}
+			else if(IsSymbol(value))
+			{
+				auto i = it_;
+				skipSymbols();
+				auto text = source_.substr(i, it_ - i);
+
+				skipWhitespaces();
+
+				if(it_ < static_cast<Iterator>(source_.size()) && source_[it_] == ':')
+				{
+					++it_;
+					auto identifier = Make<Identifier>(text);
+					auto marker = Make<Declaration>(identifier);
+					scope_->Add(marker);
+				}
+				else
+				{
+					auto marker = Make<Text>(text);
+					scope_->Add(marker);
+				}
+			}
+			else if(IsOpeningBrace(value))
+			{
+				++it_;
+
+				auto scope = Make<Scope>(scope_);
+
+				scope->opening =
+					value == '(' ? Scope::BraceType::Round :
+					value == '{' ? Scope::BraceType::Figure :
+					value == '[' ? Scope::BraceType::Square :
+					throw Exception("Invalid brace type");
+
+				ParseScope(source_, it_, scope);
+
+				scope_->Add(scope);
+			}
+			else if(IsClosingBrace(value))
+			{
+				++it_;
+
+				scope_->closing =
+					value == ')' ? Scope::BraceType::Round :
+					value == '}' ? Scope::BraceType::Figure :
+					value == ']' ? Scope::BraceType::Square :
+					throw Exception("Invalid brace type");
+
+				return;
+			}
+		}
+	}
+
+	/*
+	Iterator textBegin = it_;
+
 	while(it_ < static_cast<Iterator>(source_.length()))
 	{
 		auto value = source_[it_];
 
-		if(value == ':')
+		if(value == '.')
+		{
+			auto marker = Make<SpecialSymbol>(SpecialSymbol::Type::Dot);
+			scope_->Add(marker);
+
+			++it_;
+		}
+		else if(value == ',')
+		{
+			auto marker = Make<SpecialSymbol>(SpecialSymbol::Type::Comma);
+			scope_->Add(marker);
+
+			++it_;
+		}
+		else if(value == ';')
+		{
+			auto marker = Make<SpecialSymbol>(SpecialSymbol::Type::Semicolon);
+			scope_->Add(marker);
+
+			++it_;
+		}
+		else if(value == ':')
 		{
 			auto i = it_ > 0
 				? it_ - 1
@@ -336,7 +503,7 @@ inline void Nu::NamesDeclarationStage::Parser::ParseScope(const Source& source_,
 				--i;
 			}
 
-			if(i > 0 && IsSymbol(source_[i]))
+			if(i >= 0 && IsSymbol(source_[i]))
 			{
 				while(i >= 0 && IsSymbol(source_[i]))
 				{
@@ -425,19 +592,20 @@ inline void Nu::NamesDeclarationStage::Parser::ParseScope(const Source& source_,
 		scope_->Add(text);
 		// std::cout << rawText << std::endl;
 	}
+	*/
 }
 
-inline Nu::Reference<Nu::NamesDeclarationStage::Scope> Nu::NamesDeclarationStage::Parser::Parse(const Source& source_)
+inline Nu::Reference<Nu::NamesDeclarationStage::Root> Nu::NamesDeclarationStage::Parser::Parse(const Source& source_)
 {
-	auto mainScope = Make<Scope>(nullptr);
-	mainScope->opening = Scope::BraceType::Figure;
-	mainScope->closing = Scope::BraceType::Figure;
+	auto root = Make<Root>(nullptr);
+	root->opening = Scope::BraceType::Figure;
+	root->closing = Scope::BraceType::Figure;
 
 	int it = 0;
 
-	ParseScope(source_, it, mainScope);
+	ParseScope(source_, it, root);
 
-	return mainScope;
+	return root;
 }
 
 #pragma endregion
