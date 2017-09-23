@@ -9,11 +9,6 @@
 
 namespace Nu
 {
-	class NotImplementedException // TODO: implement
-	{
-	};
-
-
 	class Name;
 	class Unit;
 	class Keyword;

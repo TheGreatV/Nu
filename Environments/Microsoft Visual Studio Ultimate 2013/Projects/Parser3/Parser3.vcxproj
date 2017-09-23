@@ -11,8 +11,8 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{3F2C7198-27BB-4B13-A4B8-5EC03B37442D}</ProjectGuid>
-    <RootNamespace>Common</RootNamespace>
+    <ProjectGuid>{D70663E6-FD45-4354-81D1-DCF179C33AEE}</ProjectGuid>
+    <RootNamespace>Parser3</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -34,12 +34,12 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\Properties\[Nu] Default project properties (Debug).props" />
-    <Import Project="..\..\Properties\[Nu] Common.props" />
+    <Import Project="..\..\Properties\[Nu] Parser3.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\Properties\[Nu] Default project properties (Release).props" />
-    <Import Project="..\..\Properties\[Nu] Common.props" />
+    <Import Project="..\..\Properties\[Nu] Parser3.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup />
@@ -68,12 +68,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\..\Sources\Common\Common.cpp" />
-    <ClCompile Include="..\..\..\..\Sources\Common\Header.cpp" />
+    <ClCompile Include="..\..\..\..\Sources\Parser3\Header.cpp" />
+    <ClCompile Include="..\..\..\..\Sources\Parser3\Parser.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\..\Sources\Common\Common.hpp" />
-    <ClInclude Include="..\..\..\..\Sources\Common\Header.hpp" />
+    <ClInclude Include="..\..\..\..\Sources\Parser3\Header.hpp" />
+    <ClInclude Include="..\..\..\..\Sources\Parser3\Parser.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

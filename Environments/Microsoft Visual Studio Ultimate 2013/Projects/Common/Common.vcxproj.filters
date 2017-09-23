@@ -18,8 +18,14 @@
     <ClCompile Include="..\..\..\..\Sources\Common\Header.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\..\Sources\Common\Common.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\..\Sources\Common\Common.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\..\..\Sources\Common\Header.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>

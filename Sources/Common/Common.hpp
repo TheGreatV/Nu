@@ -2,7 +2,7 @@
 
 #pragma region Include
 
-#include <../Common/Common.hpp>
+#include "Header.hpp"
 
 #pragma endregion
 

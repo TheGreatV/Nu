@@ -29,20 +29,6 @@ void print(const Reference<NamesDeclarationStage::Marker>& marker)
 		{
 			print(marker);
 		}
-		/*for(auto &i : scope->identifiers)
-		{
-			for(int t = 0; t < tab; ++t) std::cout << '\t';
-
-			std::cout << i->GetValue() << std::endl;
-		}
-
-		for(auto &i : scope->units)
-		{
-			if(auto s = Nu::UpCast<Nu::NamesDeclarationStage::Scope>(i))
-			{
-				print(s);
-			}
-		}*/
 
 		--tab;
 
@@ -64,7 +50,18 @@ void print(const Reference<NamesDeclarationStage::Marker>& marker)
 	else if(auto declaration = Nu::UpCast<Nu::NamesDeclarationStage::Declaration>(marker))
 	{
 		for(int t = 0; t < tab; ++t) std::cout << '\t';
-		std::cout << '<' << declaration->GetIdentifier()->GetValue() << '>' << std::endl;
+		std::cout << '<' << declaration->GetIdentifier()->GetValue() << '>' << ':' << std::endl;
+	}
+	else if(auto specialSymbol = Nu::UpCast<Nu::NamesDeclarationStage::SpecialSymbol>(marker))
+	{
+		for(int t = 0; t < tab; ++t) std::cout << '\t';
+		auto symbol =
+			specialSymbol->GetType() == Nu::NamesDeclarationStage::SpecialSymbol::Type::Dot ? "." :
+			specialSymbol->GetType() == Nu::NamesDeclarationStage::SpecialSymbol::Type::Comma ? "," :
+			specialSymbol->GetType() == Nu::NamesDeclarationStage::SpecialSymbol::Type::Semicolon ? ";" :
+			throw Exception();
+
+		std::cout << symbol << std::endl;
 	}
 }
 
@@ -72,25 +69,37 @@ void print(const Reference<Lexing::Token>& token)
 {
 	static int tab = 0;
 
-	if(auto scope = Nu::UpCast<Nu::Lexing::Scope>(token))
+	if(auto group = Nu::UpCast<Nu::Lexing::Group>(token))
 	{
-		if(auto space = UpCast<Nu::Lexing::Space>(scope))
+		if(auto space = UpCast<Nu::Lexing::Space>(group))
 		{
 			for(int t = 0; t < tab; ++t) std::cout << '\t';
 			std::cout << "(space)" << std::endl;
 		}
-		else
+		else if(auto scope = UpCast<Nu::Lexing::Space>(group))
 		{
 			for(int t = 0; t < tab; ++t) std::cout << '\t';
 			std::cout << "(scope)" << std::endl;
 		}
+		else
+		{
+			for(int t = 0; t < tab; ++t) std::cout << '\t';
+			std::cout << "(group)" << std::endl;
+		}
 
 		for(int t = 0; t < tab; ++t) std::cout << '\t';
-		std::cout << '{' << std::endl;
+
+		auto openingBrace =
+			group->opening == Lexing::Group::BraceType::Round ? "(" :
+			group->opening == Lexing::Group::BraceType::Figure ? "{" :
+			group->opening == Lexing::Group::BraceType::Square ? "[" :
+			throw Exception();
+
+		std::cout << openingBrace << std::endl;
 
 		++tab;
 
-		for(auto &token : scope->GetTokens())
+		for(auto &token : group->GetTokens())
 		{
 			print(token);
 		}
@@ -99,19 +108,42 @@ void print(const Reference<Lexing::Token>& token)
 
 		for(int t = 0; t < tab; ++t) std::cout << '\t';
 
-		std::cout << '}' << std::endl;
+		auto closingBrace =
+			group->opening == Lexing::Group::BraceType::Round ? ")" :
+			group->opening == Lexing::Group::BraceType::Figure ? "}" :
+			group->opening == Lexing::Group::BraceType::Square ? "]" :
+			throw Exception();
+
+		std::cout << closingBrace << std::endl;
 	}
-	else if(auto sourceText = Nu::UpCast<Nu::Lexing::Source>(token))
+	else if(auto text = Nu::UpCast<Nu::Lexing::Text>(token))
 	{
 		for(int t = 0; t < tab; ++t) std::cout << '\t';
-		std::cout << '"' << sourceText->GetValue() << '"' << std::endl;
+		std::cout << '"' << text->GetValue() << '"' << std::endl;
 	}
-	// else if(auto declaration = Nu::UpCast<Nu::Lexing::Declaration>(token))
-	// {
-	// 	for(int t = 0; t < tab; ++t) std::cout << '\t';
-	// 	std::cout << '<' << declaration->GetIdentifier()->GetName() << '>' << ':' << std::endl;
-	// }
+	else if(auto declaration = Nu::UpCast<Nu::Lexing::Declaration>(token))
+	{
+		for(int t = 0; t < tab; ++t) std::cout << '\t';
+		std::cout << '<' << declaration->GetIdentifier()->GetName() << '>' << ':' << std::endl;
+	}
+	else if(auto specialSymbol = Nu::UpCast<Nu::Lexing::Symbol>(token))
+	{
+		for(int t = 0; t < tab; ++t) std::cout << '\t';
+		auto symbol =
+			specialSymbol->GetType() == Nu::NamesDeclarationStage::SpecialSymbol::Type::Dot ? "." :
+			specialSymbol->GetType() == Nu::NamesDeclarationStage::SpecialSymbol::Type::Comma ? "," :
+			specialSymbol->GetType() == Nu::NamesDeclarationStage::SpecialSymbol::Type::Semicolon ? ";" :
+			throw Exception();
+
+		std::cout << symbol << std::endl;
+	}
+	else if(auto identifier = Nu::UpCast<Nu::Lexing::Identifier>(token))
+	{
+		for(int t = 0; t < tab; ++t) std::cout << '\t';
+		std::cout << identifier->GetName() << std::endl;
+	}
 }
+
 
 void main()
 {
@@ -121,25 +153,26 @@ void main()
 		std::getline(file, source, '\0');
 		file.close();
 	}
-
-	// std::cout << "source:" << std::endl << source << std::endl;
+	// std::cout << "source:" << std::endl;
+	// std::cout << source << std::endl;
 	
 	auto cleaner = Make<Cleaning::Cleaner>();
 	auto cleanCode = cleaner->Parse(source);
-
-	// std::cout << "clean:" << std::endl << cleanCode << std::endl;
+	std::cout << "clean:" << std::endl;
+	std::cout << cleanCode << std::endl;
 
 	auto parser = Make<NamesDeclarationStage::Parser>();
 	auto nameScope = parser->Parse(cleanCode);
-	
 	std::cout << "structure:" << std::endl;
 	print(nameScope);
 	
-	auto lexer = Make<Lexing::Lexer>();
-	auto tokenScope = lexer->Parse(nameScope);
+	// auto lexer = Make<Lexing::Lexer>();
+	// auto tokenGroup = lexer->Parse();
 
-	std::cout << "tokens:" << std::endl;
-	print(Cast<Lexing::Scope>(tokenScope));
+	// auto lexer = Make<Lexing::Lexer>();
+	// auto tokenScope = lexer->Parse(nameScope);
+	// std::cout << "tokens:" << std::endl;
+	// print(Cast<Lexing::Scope>(tokenScope));
 
 	std::system("pause");
 }

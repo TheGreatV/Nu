@@ -104,6 +104,16 @@ namespace Nu
 		inline Text GetText() const;
 	};
 
+	class NotImplementedException:
+		public Exception
+	{
+	public:
+		inline NotImplementedException();
+		inline NotImplementedException(const NotImplementedException&) = default;
+		inline ~NotImplementedException() = default;
+	public:
+		inline NotImplementedException& operator = (const NotImplementedException& source) = delete;
+	};
 }
 
 
@@ -140,6 +150,15 @@ inline Nu::Exception::Exception(const Text& errorText_):
 inline Nu::Exception::Text Nu::Exception::GetText() const
 {
 	return text;
+}
+
+#pragma endregion
+
+#pragma region NotImplementedException
+
+inline Nu::NotImplementedException::NotImplementedException():
+	Exception("Not implemented")
+{
 }
 
 #pragma endregion
