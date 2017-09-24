@@ -35,9 +35,6 @@
     <ClCompile Include="Translator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Parser2.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Parser3.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

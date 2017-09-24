@@ -18,7 +18,7 @@ namespace Testing
 			/* Requirement: SCP.01
 			 * Barely created Scope should NOT contain any Names.
 			 */
-			TEST_METHOD(ScopeEmpty)
+			TEST_METHOD(Scope_Empty)
 			{
 				auto scope = Make<Parsing3::Scope>();
 				{
@@ -35,7 +35,7 @@ namespace Testing
 			 * after the Name "Y" will be added to the Scope under Value "X" - 
 			 * the Scope should contain Name "Y" under the Value "X" with the Level equals to 0.
 			 */
-			TEST_METHOD(ScopeSingleName)
+			TEST_METHOD(Scope_SingleName)
 			{
 				auto scope = Make<Parsing3::Scope>();
 
@@ -74,7 +74,7 @@ namespace Testing
 			 * with corresponding Levels increased by 1,
 			 * and the Name "Y" under the Value "X" with Level equal to 0.
 			 */
-			TEST_METHOD(ScopeDuplicatedName)
+			TEST_METHOD(Scope_DuplicatedName)
 			{
 				auto scope = Make<Parsing3::Scope>();
 
@@ -125,7 +125,7 @@ namespace Testing
 			}
 			/* Requirement: TODO
 			 */
-			TEST_METHOD(ScopeSeveralNames)
+			TEST_METHOD(Scope_SeveralNames)
 			{
 				auto scope = Make<Parsing3::Scope>();
 
@@ -183,7 +183,7 @@ namespace Testing
 			}
 			/* Requirement: TODO
 			 */
-			TEST_METHOD(ScopeDuplicatedNameWithOtherNameBetween)
+			TEST_METHOD(Scope_DuplicatedNameWithOtherNameBetween)
 			{
 				auto scope = Make<Parsing3::Scope>();
 
@@ -238,7 +238,7 @@ namespace Testing
 		public:
 			/* Requirement: TODO
 			 */
-			TEST_METHOD(ParenthoodManagerEmpty)
+			TEST_METHOD(ParenthoodManager_Empty)
 			{
 				auto parenthoodManager = Make<ParenthoodManager>();
 				auto scope1 = Make<Parsing3::Scope>();
@@ -259,7 +259,7 @@ namespace Testing
 			}
 			/* Requirement: TODO
 			 */
-			TEST_METHOD(ParenthoodManagerUnitParent)
+			TEST_METHOD(ParenthoodManager_UnitParent)
 			{
 				auto parenthoodManager = Make<ParenthoodManager>();
 				auto scope1 = Make<Parsing3::Scope>();
@@ -277,7 +277,7 @@ namespace Testing
 			}
 			/* Requirement: TODO
 			 */
-			TEST_METHOD(ParenthoodManagerSingleScopeNames)
+			TEST_METHOD(ParenthoodManager_SingleScopeNames)
 			{
 				auto parenthoodManager = Make<ParenthoodManager>();
 				auto scope1 = Make<Parsing3::Scope>();
@@ -316,7 +316,7 @@ namespace Testing
 			}
 			/* Requirement: TODO
 			 */
-			TEST_METHOD(ParenthoodManagerTwoNestedScopeNames)
+			TEST_METHOD(ParenthoodManager_TwoNestedScopeNames)
 			{
 				auto parenthoodManager = Make<ParenthoodManager>();
 				auto scope1 = Make<Parsing3::Scope>();
@@ -377,6 +377,392 @@ namespace Testing
 					);
 				}
 			}
+		public:
+			TEST_METHOD(Parser_ExtractName_SingleName)
+			{
+				auto scope = Make<Parsing3::Scope>();
+				auto parenthoodManager = Make<Parsing3::ParenthoodManager>();
+
+				auto nameValue1 = "a";
+				auto name1 = scope->Add(nameValue1);
+
+				MarkersContainer::Markers markers;
+				{
+					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("a")));
+				};
+				auto it = markers.begin();
+
+				auto output = Parser::ExtractName(markers, it, scope, parenthoodManager);
+
+				Assert::IsTrue(
+					output == name1,
+					L"Verify that name is as expected"
+				);
+			}
+			TEST_METHOD(Parser_ExtractName_SingleNameWithTailText)
+			{
+				auto scope = Make<Parsing3::Scope>();
+				auto parenthoodManager = Make<Parsing3::ParenthoodManager>();
+
+				auto nameValue1 = "a";
+				auto name1 = scope->Add(nameValue1);
+
+				MarkersContainer::Markers markers;
+				{
+					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("a")));
+					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("b")));
+				};
+				auto it = markers.begin();
+
+				auto output = Parser::ExtractName(markers, it, scope, parenthoodManager);
+
+				Assert::IsTrue(
+					output == name1,
+					L"Verify that name is as expected"
+				);
+			}
+			TEST_METHOD(Parser_ExtractName_MultipleNames)
+			{
+				auto scope = Make<Parsing3::Scope>();
+				auto parenthoodManager = Make<Parsing3::ParenthoodManager>();
+
+				auto nameValue1 = "a";
+				auto name1 = scope->Add(nameValue1);
+				
+				auto nameValue2 = "b";
+				auto name2 = scope->Add(nameValue2);
+
+				MarkersContainer::Markers markers1;
+				{
+					markers1.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("a")));
+				};
+				auto it1 = markers1.begin();
+
+				auto output1 = Parser::ExtractName(markers1, it1, scope, parenthoodManager);
+
+				Assert::IsTrue(
+					output1 == name1,
+					L"Verify that name is as expected"
+				);
+
+				MarkersContainer::Markers markers2;
+				{
+					markers2.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("b")));
+				};
+				auto it2 = markers2.begin();
+
+				auto output2 = Parser::ExtractName(markers2, it2, scope, parenthoodManager);
+
+				Assert::IsTrue(
+					output2 == name2,
+					L"Verify that name is as expected"
+				);
+			}
+			TEST_METHOD(Parser_ExtractName_SingleDuplicatedName)
+			{
+				auto scope = Make<Parsing3::Scope>();
+				auto parenthoodManager = Make<Parsing3::ParenthoodManager>();
+
+				auto nameValue1 = "a";
+				auto name1 = scope->Add(nameValue1);
+				auto name2 = scope->Add(nameValue1);
+
+				MarkersContainer::Markers markers1;
+				{
+					markers1.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("a")));
+				};
+				auto it1 = markers1.begin();
+
+				auto output1 = Parser::ExtractName(markers1, it1, scope, parenthoodManager);
+
+				Assert::IsTrue(
+					output1 == name2,
+					L"Verify that name is as expected"
+				);
+
+				MarkersContainer::Markers markers2;
+				{
+					markers2.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Special>(Nu::Lexing2::Special::Value::Dot)));
+					markers2.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("a")));
+				};
+				auto it2 = markers2.begin();
+
+				auto output2 = Parser::ExtractName(markers2, it2, scope, parenthoodManager);
+
+				Assert::IsTrue(
+					output2 == name1,
+					L"Verify that name is as expected"
+				);
+			}
+			TEST_METHOD(Parser_ExtractName_SeveralScopes)
+			{
+				auto parenthoodManager = Make<Parsing3::ParenthoodManager>();
+				auto scope1 = Make<Parsing3::Scope>();
+				auto scope2 = Make<Parsing3::Scope>();
+				{
+					parenthoodManager->SetParent(scope2, scope1);
+				}
+
+				auto nameValue1 = "a";
+				auto name1 = scope1->Add(nameValue1);
+				auto name2 = scope2->Add(nameValue1);
+
+				MarkersContainer::Markers markers1;
+				{
+					markers1.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("a")));
+				};
+				auto it1 = markers1.begin();
+
+				auto output1 = Parser::ExtractName(markers1, it1, scope2, parenthoodManager);
+
+				Assert::IsTrue(
+					output1 == name2,
+					L"Verify that name is as expected"
+				);
+
+				MarkersContainer::Markers markers2;
+				{
+					markers2.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Special>(Nu::Lexing2::Special::Value::Dot)));
+					markers2.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("a")));
+				};
+				auto it2 = markers2.begin();
+
+				auto output2 = Parser::ExtractName(markers2, it2, scope2, parenthoodManager);
+
+				Assert::IsTrue(
+					output2 == name1,
+					L"Verify that name is as expected"
+				);
+			}
+			TEST_METHOD(Parser_ExtractName_LongName)
+			{
+				auto parenthoodManager = Make<Parsing3::ParenthoodManager>();
+				auto scope = Make<Parsing3::Scope>();
+
+				auto nameValue1 = "ab";
+				auto name1 = scope->Add(nameValue1);
+				auto nameValue2 = "a";
+				auto name2 = scope->Add(nameValue2);
+
+				MarkersContainer::Markers markers1;
+				{
+					markers1.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("ab")));
+				};
+				auto it1 = markers1.begin();
+
+				auto output1 = Parser::ExtractName(markers1, it1, scope, parenthoodManager);
+
+				Assert::IsTrue(
+					output1 == name1,
+					L"Verify that name is as expected"
+				);
+
+				MarkersContainer::Markers markers2;
+				{
+					markers2.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("a")));
+				};
+				auto it2 = markers2.begin();
+
+				auto output2 = Parser::ExtractName(markers2, it2, scope, parenthoodManager);
+
+				Assert::IsTrue(
+					output2 == name2,
+					L"Verify that name is as expected"
+				);
+			}
+			TEST_METHOD(Parser_ExtractName_NameDivision)
+			{
+				auto parenthoodManager = Make<Parsing3::ParenthoodManager>();
+				auto scope = Make<Parsing3::Scope>();
+
+				auto nameValue1 = "a";
+				auto name1 = scope->Add(nameValue1);
+
+				MarkersContainer::Markers markers;
+				{
+					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("ab")));
+				};
+				auto it = markers.begin();
+
+				try
+				{
+					Parser::ExtractName(markers, it, scope, parenthoodManager);
+
+					Assert::Fail(L"Exception fail");
+				}
+				catch (const Parser::MarkersDivisionRequired& division_)
+				{
+					auto m1 = *division_.markers.begin();
+					auto m2 = *(++division_.markers.begin());
+
+					Assert::IsTrue(
+						division_.begin == markers.begin() &&
+						division_.end == markers.end() &&
+						UpCast<Lexing2::Text>(UpCast<Markers::Token>(m1)->GetValue())->GetValue() == "a" &&
+						UpCast<Lexing2::Text>(UpCast<Markers::Token>(m2)->GetValue())->GetValue() == "b",
+						L"Verify that correct exception is thrown"
+					);
+				}
+			}
+			TEST_METHOD(Parser_ExtractName_ChildNameDivision)
+			{
+				auto parenthoodManager = Make<Parsing3::ParenthoodManager>();
+
+				auto scope1 = Make<Parsing3::Scope>();
+				auto nameValue1 = "a";
+				auto name1 = scope1->Add(nameValue1);
+
+				auto scope2 = Make<Parsing3::Scope>();
+				{
+					parenthoodManager->SetParent(scope2, scope1);
+					parenthoodManager->SetValue(name1, scope2);
+				}
+				auto nameValue2 = "b";
+				auto name2 = scope2->Add(nameValue2);
+
+				MarkersContainer::Markers markers;
+				{
+					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("a")));
+					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Special>(Nu::Lexing2::Special::Value::Dot)));
+					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("bc")));
+				};
+				auto it = markers.begin();
+
+				try
+				{
+					Parser::ExtractName(markers, it, scope1, parenthoodManager);
+
+					Assert::Fail(L"Exception fail");
+				}
+				catch (const Parser::MarkersDivisionRequired& division_)
+				{
+					auto m1 = *division_.markers.begin();
+					auto m2 = *(++division_.markers.begin());
+
+					Assert::IsTrue(
+						division_.begin == (++(++markers.begin())) &&
+						division_.end == (markers.end()) &&
+						UpCast<Lexing2::Text>(UpCast<Markers::Token>(m1)->GetValue())->GetValue() == "b" &&
+						UpCast<Lexing2::Text>(UpCast<Markers::Token>(m2)->GetValue())->GetValue() == "c",
+						L"Verify that correct exception is thrown"
+					);
+				}
+			}
+			TEST_METHOD(Parser_ExtractName_ChildName)
+			{
+				MarkersContainer::Markers markers;
+				{
+					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("a")));
+					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Special>(Nu::Lexing2::Special::Value::Dot)));
+					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("b")));
+				};
+				auto it = markers.begin();
+
+				auto parenthoodManager = Make<Parsing3::ParenthoodManager>();
+				
+				auto scope1 = Make<Parsing3::Scope>();
+				auto nameValue1 = "a";
+				auto name1 = scope1->Add(nameValue1);
+
+				auto scope2 = Make<Parsing3::Scope>();
+				{
+					parenthoodManager->SetParent(scope2, scope1);
+					parenthoodManager->SetValue(name1, scope2);
+				}
+				auto nameValue2 = "b";
+				auto name2 = scope2->Add(nameValue2);
+
+				auto output = Parser::ExtractName(markers, it, scope1, parenthoodManager);
+
+				Assert::IsTrue(
+					output == name2,
+					L"Verify that name is as expected"
+				);
+			}
+			TEST_METHOD(Parser_ExtractName_ChildNameWithTailText)
+			{
+				MarkersContainer::Markers markers;
+				{
+					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("a")));
+					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Special>(Nu::Lexing2::Special::Value::Dot)));
+					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("b")));
+					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("c")));
+				};
+				auto it = markers.begin();
+
+				auto parenthoodManager = Make<Parsing3::ParenthoodManager>();
+				
+				auto scope1 = Make<Parsing3::Scope>();
+				auto nameValue1 = "a";
+				auto name1 = scope1->Add(nameValue1);
+
+				auto scope2 = Make<Parsing3::Scope>();
+				{
+					parenthoodManager->SetParent(scope2, scope1);
+					parenthoodManager->SetValue(name1, scope2);
+				}
+				auto nameValue2 = "b";
+				auto name2 = scope2->Add(nameValue2);
+
+				auto output = Parser::ExtractName(markers, it, scope1, parenthoodManager);
+
+				Assert::IsTrue(
+					output == name2,
+					L"Verify that name is as expected"
+				);
+			}
+			TEST_METHOD(Parser_ExtractName_ChildNameSkip)
+			{
+				auto parenthoodManager = Make<Parsing3::ParenthoodManager>();
+
+				auto scope = Make<Parsing3::Scope>();
+				auto nameValue1 = "a";
+				auto name1 = scope->Add(nameValue1);
+
+				MarkersContainer::Markers markers;
+				{
+					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("a")));
+					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Special>(Nu::Lexing2::Special::Value::Dot)));
+					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("b")));
+				};
+				auto it = markers.begin();
+
+				try
+				{
+					Parser::ExtractName(markers, it, scope, parenthoodManager);
+
+					Assert::Fail(L"Exception fail");
+				}
+				catch (const Parser::MarkersSkipRequired& skip_)
+				{
+					Assert::IsTrue(
+						skip_.end == markers.end(),
+						L"Verify that correct exception is thrown"
+					);
+				}
+			}
+			/*TEST_METHOD(Test1)
+			{
+				MarkersContainer::Markers markers;
+				{
+					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Special>(Nu::Lexing2::Special::Value::Dot)));
+					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Special>(Nu::Lexing2::Special::Value::Dot)));
+					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("ab")));
+				};
+				auto it = markers.begin();
+
+				auto scope = Make<Parsing3::Scope>();
+				auto parenthoodManager = Make<Parsing3::ParenthoodManager>();
+
+				auto nameValue1 = "a";
+				auto name1 = scope->Add(nameValue1);
+				auto name2 = scope->Add(nameValue1); // fictive
+				auto name3 = scope->Add(nameValue1); // fictive
+				auto nameValue4 = "ab";
+				auto name4 = scope->Add(nameValue4); // fictive
+
+				auto output = Parser::ExtractName(markers, it, scope, parenthoodManager);
+			}*/
 		};
 	}
 }

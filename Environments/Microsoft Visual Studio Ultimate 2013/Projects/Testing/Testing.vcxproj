@@ -38,14 +38,12 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\Properties\[Nu] Default project properties (Debug).props" />
     <Import Project="..\..\Properties\[Nu] Lexer2 - User.props" />
-    <Import Project="..\..\Properties\[Nu] Parser2 - User.props" />
     <Import Project="..\..\Properties\[Nu] Parser3 - User.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\Properties\[Nu] Default project properties (Release).props" />
     <Import Project="..\..\Properties\[Nu] Lexer2 - User.props" />
-    <Import Project="..\..\Properties\[Nu] Parser2 - User.props" />
     <Import Project="..\..\Properties\[Nu] Parser3 - User.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
@@ -96,7 +94,6 @@
   <ItemGroup>
     <ClCompile Include="Cleaner.cpp" />
     <ClCompile Include="Lexer2.cpp" />
-    <ClCompile Include="Parser2.cpp" />
     <ClCompile Include="Parser3.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

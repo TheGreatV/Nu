@@ -27,12 +27,16 @@ namespace Nu
 
 #pragma region Nu
 
+#pragma region Lexing2
+
 #pragma region Entity
 
 inline Nu::Lexing2::Entity::Entity(const Reference<Entity>& this_):
 	Nu::Entity(this_)
 {
 }
+
+#pragma endregion
 
 #pragma endregion
 
