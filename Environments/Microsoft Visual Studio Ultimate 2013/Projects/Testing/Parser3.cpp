@@ -1142,6 +1142,116 @@ namespace Testing
 					L"Verify that value is space"
 				);
 			}
+			TEST_METHOD(Parser_Parse_KeywordAliasAndUsage)
+			{
+				auto parser = Make<Parser>();
+
+				auto input = Make<Lexing2::Container>();
+				{
+					input->GetTokens().push_back(Make<Lexing2::Text>("s"));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+					input->GetTokens().push_back(Make<Lexing2::Text>("space"));
+					input->GetTokens().push_back(Make<Lexing2::Text>("a"));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+					input->GetTokens().push_back(Make<Lexing2::Text>("s"));
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure));
+				}
+
+				auto output = parser->Parse(input);
+				auto &names = output->GetNames();
+
+				auto nameIt = names.find("a");
+
+				Assert::IsTrue(
+					nameIt != names.end(),
+					L"Verify that there is name \"a\""
+				);
+
+				auto levels = (*nameIt).second;
+				auto levelsIt = levels.find(0);
+
+				Assert::IsTrue(
+					levelsIt != levels.end(),
+					L"Verify that there is level 0"
+				);
+
+				auto name = (*levelsIt).second;
+				auto value = parser->parenthoodManager->GetValue(name);
+				auto space = UpCast<Parsing3::Space>(value);
+
+				Assert::IsTrue(
+					space != nullptr,
+					L"Verify that value is space"
+				);
+			}
+			TEST_METHOD(Parser_Parse_NestedSpace)
+			{
+				auto parser = Make<Parser>();
+
+				auto input = Make<Lexing2::Container>();
+				{
+					Lexing2::Container::Tokens nested;
+					{
+						nested.push_back(Make<Lexing2::Text>("b"));
+						nested.push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+						nested.push_back(Make<Lexing2::Text>("space"));
+						nested.push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure));
+					}
+
+					input->GetTokens().push_back(Make<Lexing2::Text>("a"));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+					input->GetTokens().push_back(Make<Lexing2::Text>("space"));
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure, nested));
+				}
+
+				auto output = parser->Parse(input);
+				auto &names = output->GetNames();
+
+				auto nameIt = names.find("a");
+
+				Assert::IsTrue(
+					nameIt != names.end(),
+					L"Verify that there is name \"a\""
+				);
+
+				auto levels = (*nameIt).second;
+				auto levelsIt = levels.find(0);
+
+				Assert::IsTrue(
+					levelsIt != levels.end(),
+					L"Verify that there is level 0"
+				);
+
+				auto name = (*levelsIt).second;
+				auto value = parser->parenthoodManager->GetValue(name);
+				auto space = UpCast<Parsing3::Space>(value);
+
+				auto &names2 = space->GetNames();
+
+				auto nameIt2 = names2.find("b");
+
+				Assert::IsTrue(
+					nameIt2 != names2.end(),
+					L"Verify that there is name \"b\""
+				);
+
+				auto levels2 = (*nameIt2).second;
+				auto levelsIt2 = levels2.find(0);
+
+				Assert::IsTrue(
+					levelsIt2 != levels2.end(),
+					L"Verify that there is level 0"
+				);
+
+				auto name2 = (*levelsIt2).second;
+				auto value2 = parser->parenthoodManager->GetValue(name2);
+				auto space2 = UpCast<Parsing3::Space>(value2);
+
+				Assert::IsTrue(
+					space2 != nullptr,
+					L"Verify that value is space"
+				);
+			}
 		};
 	}
 }

@@ -252,7 +252,9 @@ namespace Nu
 			inline Reference<Space> ExtractSpaceDeclaration(Data& data_, It& it_, const Reference<Scope>& scope_);
 			inline Reference<Space> ParseSpace(Data& data_, It& it_, const Reference<Scope>& scope_);
 			inline void Preparse(const Reference<Root>& root_);
+			inline void Preparse(const Reference<Space>& space_);
 			inline void Parse(const Reference<Root>& root_);
+			inline void Parse(const Reference<Space>& space_);
 		public:
 			inline Output Parse(const Input& input_);
 		};
@@ -893,6 +895,13 @@ inline Nu::Reference<Nu::Parsing3::Markers::Declaration> Nu::Parsing3::Parser::P
 	
 	if (auto declaration = ParseMarker<Markers::Declaration>(data_, it_))
 	{
+		auto &unit = declaration->GetUnit();
+
+		if (auto space = UpCast<Space>(unit))
+		{
+			Parse(space);
+		}
+
 		return declaration;
 	}
 	else if (auto declarationHeader = ParseMarker<Markers::DeclarationHeader>(data_, it_))
@@ -1012,6 +1021,7 @@ inline Nu::Reference<Nu::Parsing3::Space> Nu::Parsing3::Parser::ParseSpace(Data&
 	it_ = o;
 	return nullptr;
 }
+
 inline void Nu::Parsing3::Parser::Preparse(const Reference<Root>& root_)
 {
 	auto &markers = root_->GetMarkers();
@@ -1024,6 +1034,44 @@ inline void Nu::Parsing3::Parser::Preparse(const Reference<Root>& root_)
 			auto o = it;
 
 			if (auto declarationHeader = ExtractDeclarationHeader(markers, it, root_))
+			{
+				MarkersContainer::Markers markers;
+				{
+					markers.push_back(declarationHeader);
+				}
+
+				throw MarkersReplaceRequired(o, it, markers);
+			}
+			else
+			{
+				++it;
+			}
+		}
+		catch (MarkersReplaceRequired replace)
+		{
+			auto i = markers.erase(replace.begin, replace.end);
+
+			for (auto &m : replace.markers)
+			{
+				i = markers.insert(i, m);
+			}
+
+			it = markers.begin();
+		}
+	}
+}
+inline void Nu::Parsing3::Parser::Preparse(const Reference<Space>& space_)
+{
+	auto &markers = space_->GetMarkers();
+	auto it = markers.begin();
+
+	while (it != markers.end())
+	{
+		try
+		{
+			auto o = it;
+
+			if (auto declarationHeader = ExtractDeclarationHeader(markers, it, space_))
 			{
 				MarkersContainer::Markers markers;
 				{
@@ -1069,6 +1117,51 @@ inline void Nu::Parsing3::Parser::Parse(const Reference<Root>& root_)
 				// do nothing
 			}
 			else if (auto declaration = ParseDeclaration(markers, it, root_))
+			{
+				// do nothing
+			}
+			else
+			{
+				throw Exception();
+			}
+		}
+		catch (MarkersReplaceRequired replace)
+		{
+			auto i = markers.erase(replace.begin, replace.end);
+
+			for (auto &m : replace.markers)
+			{
+				i = markers.insert(i, m);
+			}
+
+			it = markers.begin();
+		}
+		catch (MarkersSkipRequired skip)
+		{
+			isMarkerSkipped = true;
+
+			it = skip.end;
+		}
+	}
+}
+inline void Nu::Parsing3::Parser::Parse(const Reference<Space>& space_)
+{
+	Preparse(space_);
+
+	auto &markers = space_->GetMarkers();
+	auto it = markers.begin();
+
+	while (it != markers.end())
+	{
+		try
+		{
+			auto o = it;
+
+			if (auto space = ParseSpace(markers, it, space_))
+			{
+				// do nothing
+			}
+			else if (auto declaration = ParseDeclaration(markers, it, space_))
 			{
 				// do nothing
 			}
