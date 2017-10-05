@@ -54,11 +54,11 @@ namespace Nu
 			Tokens tokens;
 		public:
 			inline Container() = delete;
-			inline Container(const Group&) = delete;
+			inline Container(const Container&) = delete;
 			inline Container(const Reference<Container>& this_, const Tokens& tokens_ = Tokens());
 			virtual ~Container() override = default;
 		public:
-			inline Group& operator = (const Group&) = delete;
+			inline Container& operator = (const Container&) = delete;
 		public:
 			inline Tokens& GetTokens();
 		};
