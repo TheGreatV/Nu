@@ -670,6 +670,206 @@ inline Nu::Reference<Nu::Parsing3::Name> Nu::Parsing3::Parser::ExtractName(Data&
 					// child chain
 					while (true)
 					{
+						Size dotsCount = 0;
+						{
+							while (true)
+							{
+								if (auto specialMarker = ParseToken<Lexing2::Special>(data_, it_))
+								{
+									if (specialMarker->GetValue() == Lexing2::Special::Value::Dot)
+									{
+										++dotsCount;
+
+										continue;
+									}
+								}
+
+								break;
+							}
+						}
+
+						if (dotsCount > 0)
+						{
+							auto o2 = it_;
+
+							if (auto text = ParseToken<Lexing2::Text>(data_, it_))
+							{
+								auto textValue = text->GetValue();
+								auto parentUnit = parenthoodManager_->GetValue(lastName);
+
+								if (parentUnit)
+								{
+									auto scope = UpCast<Scope>(parentUnit);
+
+									if (scope)
+									{
+										auto names = parenthoodManager_->GetNames(scope);
+										auto namesByLength = Vector<Name::Value>();
+										{
+											for (auto &i : names)
+											{
+												auto &value = i.first;
+
+												if (std::find(namesByLength.begin(), namesByLength.end(), value) == namesByLength.end())
+												{
+													namesByLength.push_back(value);
+												}
+											}
+
+											std::sort(namesByLength.begin(), namesByLength.end(), [](const Name::Value& a, const Name::Value& b)
+											{
+												return a.length() > b.length();
+											});
+										}
+
+										lastName = [&]()
+										{
+											for (auto &nameValue : namesByLength)
+											{
+												if (textValue.find(nameValue) == 0)
+												{
+													auto &levels = names[nameValue];
+													auto j = levels.find(dotsCount - 1);
+
+													if (j == levels.end())
+													{
+														throw Exception(); // TODO
+													}
+
+													auto childName = (*j).second;
+
+													if (textValue.size() == nameValue.size())
+													{
+														return childName;
+													}
+													else
+													{
+														auto markers = Data();
+														{
+															markers.push_back(Make<Markers::Token>(Make<Lexing2::Text>(nameValue)));
+															markers.push_back(Make<Markers::Token>(Make<Lexing2::Text>(textValue.substr(nameValue.size()))));
+														}
+
+														throw MarkersReplaceRequired(o2, it_, markers);
+													}
+												}
+											}
+
+											// no matches found
+											throw Exception(); // TODO
+										}();
+									}
+									else
+									{
+										throw Exception(); // TODO
+									}
+								}
+								else
+								{
+									auto o2 = it_;
+
+									while (it_ != data_.end() && !UpCast<Markers::DeclarationHeader>(*it_))
+									{
+										++it_;
+									}
+
+									throw MarkersSkipRequired(o2, it_);
+								}
+							}
+							else
+							{
+								throw Exception(); // TODO
+							}
+						}
+						else
+						{
+							break;
+						}
+					}
+
+					return lastName;
+				}
+				else
+				{
+					auto markers = Data();
+					{
+						markers.push_back(Make<Markers::Token>(Make<Lexing2::Text>(nameValue)));
+						markers.push_back(Make<Markers::Token>(Make<Lexing2::Text>(value.substr(nameValue.size()))));
+					}
+
+					throw MarkersReplaceRequired(o, it_, markers);
+				}
+			}
+		}
+
+		throw Exception(); // TODO
+	}
+
+	it_ = o;
+	return nullptr;
+}
+/*inline Nu::Reference<Nu::Parsing3::Name> Nu::Parsing3::Parser::ExtractName(Data& data_, It& it_, const Reference<Scope>& scope_, const Reference<ParenthoodManager>& parenthoodManager_)
+{
+	auto o = it_;
+
+	Size dotsCount = 0;
+	{
+		while (true)
+		{
+			if (auto specialMarker = ParseToken<Lexing2::Special>(data_, it_))
+			{
+				if (specialMarker->GetValue() == Lexing2::Special::Value::Dot)
+				{
+					++dotsCount;
+
+					continue;
+				}
+			}
+
+			break;
+		}
+	}
+
+	if (auto text = ParseToken<Lexing2::Text>(data_, it_))
+	{
+		auto value = text->GetValue();
+		auto names = parenthoodManager_->GetNames(scope_);
+		auto namesByLength = Vector<Name::Value>();
+		{
+			for (auto &i : names)
+			{
+				auto &value = i.first;
+
+				if (std::find(namesByLength.begin(), namesByLength.end(), value) == namesByLength.end())
+				{
+					namesByLength.push_back(value);
+				}
+			}
+
+			std::sort(namesByLength.begin(), namesByLength.end(), [](const Name::Value& a, const Name::Value& b) { return a.length() > b.length(); });
+		}
+
+		for (auto &nameValue : namesByLength)
+		{
+			if (value.find(nameValue) == 0)
+			{
+				auto &levels = names[nameValue];
+				auto j = levels.find(dotsCount);
+				
+				if (j == levels.end())
+				{
+					throw Exception(); // TODO
+				}
+
+				auto name = (*j).second;
+
+				if (value.size() == nameValue.size())
+				{
+					auto lastName = name;
+
+					// child chain
+					while (true)
+					{
 						if (auto special = ParseToken<Lexing2::Special>(data_, it_))
 						{
 							if (special->GetValue() == Lexing2::Special::Value::Dot)
@@ -817,7 +1017,7 @@ inline Nu::Reference<Nu::Parsing3::Name> Nu::Parsing3::Parser::ExtractName(Data&
 
 	it_ = o;
 	return nullptr;
-}
+}*/
 
 inline Nu::Parsing3::Parser::Parser(const Reference<Parser>& this_):
 	Entity(this_)
