@@ -810,6 +810,43 @@ namespace Testing
 					L"Verify that markers is empty"
 				);
 			}
+			TEST_METHOD(Parser_Parse_SingleDelimiter)
+			{
+				auto parser = Make<Parser>();
+
+				auto input = Make<Lexing2::Container>();
+				{
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Semicolon));
+				}
+
+				auto output = parser->Parse(input);
+
+				Assert::IsTrue(
+					output != nullptr,
+					L"Verify that parsing output in not a nullptr"
+				);
+
+				auto &names = output->GetNames();
+
+				Assert::IsTrue(
+					names.size() == 0,
+					L"Verify that names is empty"
+				);
+
+				auto &markers = output->GetMarkers();
+
+				Assert::IsTrue(
+					markers.size() == 1,
+					L"Verify that there is 1 marker"
+				);
+
+				auto delimiter = UpCast<Markers::Delimiter>(*markers.begin());
+
+				Assert::IsTrue(
+					delimiter != nullptr,
+					L"Verify that marker is delimiter"
+				);
+			}
 			TEST_METHOD(Parser_Parse_SingleSpace)
 			{
 				auto parser = Make<Parser>();
@@ -838,6 +875,42 @@ namespace Testing
 				Assert::IsTrue(
 					UpCast<Parsing3::Space>(*markers.begin()) != nullptr,
 					L"Verify that marker is space"
+				);
+			}
+			TEST_METHOD(Parser_Parse_SingleSpaceWithDelimiter)
+			{
+				auto parser = Make<Parser>();
+
+				auto input = Make<Lexing2::Container>();
+				{
+					input->GetTokens().push_back(Make<Lexing2::Text>("space"));
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Semicolon));
+				}
+
+				auto output = parser->Parse(input);
+				auto &names = output->GetNames();
+
+				Assert::IsTrue(
+					names.size() == 0,
+					L"Verify that names is empty"
+				);
+
+				auto &markers = output->GetMarkers();
+
+				Assert::IsTrue(
+					markers.size() == 2,
+					L"Verify that there is 2 markers"
+				);
+
+				Assert::IsTrue(
+					UpCast<Parsing3::Space>(*markers.begin()) != nullptr,
+					L"Verify that marker is space"
+				);
+
+				Assert::IsTrue(
+					UpCast<Parsing3::Markers::Delimiter>(*(++markers.begin())) != nullptr,
+					L"Verify that marker is delimiter"
 				);
 			}
 			TEST_METHOD(Parser_Parse_SeveralSpaces)
@@ -874,6 +947,49 @@ namespace Testing
 
 				Assert::IsTrue(
 					UpCast<Parsing3::Space>(*(++markers.begin())) != nullptr,
+					L"Verify that marker is space"
+				);
+			}
+			TEST_METHOD(Parser_Parse_SeveralSpacesWithDelimiter)
+			{
+				auto parser = Make<Parser>();
+
+				auto input = Make<Lexing2::Container>();
+				{
+					input->GetTokens().push_back(Make<Lexing2::Text>("space"));
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Semicolon));
+					input->GetTokens().push_back(Make<Lexing2::Text>("space"));
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure));
+				}
+
+				auto output = parser->Parse(input);
+				auto &names = output->GetNames();
+
+				Assert::IsTrue(
+					names.size() == 0,
+					L"Verify that names is empty"
+				);
+
+				auto &markers = output->GetMarkers();
+
+				Assert::IsTrue(
+					markers.size() == 3,
+					L"Verify that there is 3 markers"
+				);
+
+				Assert::IsTrue(
+					UpCast<Parsing3::Space>(*markers.begin()) != nullptr,
+					L"Verify that marker is space"
+				);
+
+				Assert::IsTrue(
+					UpCast<Parsing3::Markers::Delimiter>(*(++markers.begin())) != nullptr,
+					L"Verify that marker is delimiter"
+				);
+
+				Assert::IsTrue(
+					UpCast<Parsing3::Space>(*(++(++markers.begin()))) != nullptr,
 					L"Verify that marker is space"
 				);
 			}

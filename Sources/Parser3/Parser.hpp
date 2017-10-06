@@ -19,6 +19,7 @@ namespace Nu
 			class Token;
 			class DeclarationHeader;
 			class Declaration;
+			class Delimiter;
 		}
 		class MarkersContainer;
 		class Name;
@@ -87,6 +88,17 @@ namespace Nu
 				inline Declaration& operator = (const Declaration&) = delete;
 			public:
 				inline Reference<Unit> GetUnit() const;
+			};
+			class Delimiter:
+				public Marker
+			{
+			public:
+				inline Delimiter() = delete;
+				inline Delimiter(const Reference<Delimiter>& this_);
+				inline Delimiter(const Delimiter&) = delete;
+				virtual ~Delimiter() override = default;
+			public:
+				inline Delimiter& operator = (const Delimiter&) = delete;
 			};
 		}
 		class MarkersContainer:
@@ -232,6 +244,7 @@ namespace Nu
 			inline static MarkersContainer::Markers Convert(const Lexing2::Container::Tokens& source_);
 			template<class T> inline static Reference<T> ParseMarker(Data& data_, It& it_);
 			template<class T> inline static Reference<T> ParseToken(Data& data_, It& it_);
+			inline static Reference<Lexing2::Special> ParseSpecialToken(Data& data_, It& it_, const Lexing2::Special::Value& value_ = Lexing2::Special::Value::None);
 			inline static Reference<Name> ExtractName(Data& data_, It& it_, const Reference<Scope>& scope_, const Reference<ParenthoodManager>& parenthoodManager_);
 		protected:
 			bool isMarkerSkipped;
@@ -245,6 +258,8 @@ namespace Nu
 		public:
 			inline Parser& operator = (const Parser&) = delete;
 		protected:
+			inline Reference<Markers::Delimiter> ExtractDelimiter(Data& data_, It& it_);
+			inline Reference<Markers::Delimiter> ParseDelimiter(Data& data_, It& it_);
 			inline Reference<Name> ParseName(Data& data_, It& it_, const Reference<Scope>& scope_);
 			inline Reference<Keyword> ParseKeyword(Data& data_, It& it_, const Reference<Scope>& scope_, const Keyword::Value& value_ = Keyword::Value::None);
 			inline Reference<Markers::DeclarationHeader> ExtractDeclarationHeader(Data& data_, It& it_, const Reference<Scope>& scope_);
@@ -335,6 +350,15 @@ inline Nu::Parsing3::Markers::Declaration::Declaration(const Reference<Declarati
 inline Nu::Reference<Nu::Parsing3::Unit> Nu::Parsing3::Markers::Declaration::GetUnit() const
 {
 	return unit;
+}
+
+#pragma endregion
+
+#pragma region Delimiter
+
+inline Nu::Parsing3::Markers::Delimiter::Delimiter(const Reference<Delimiter>& this_):
+	Marker(this_)
+{
 }
 
 #pragma endregion
@@ -608,6 +632,21 @@ template<class T> inline typename Nu::Reference<T> Nu::Parsing3::Parser::ParseTo
 	it_ = o;
 	return nullptr;
 }
+inline Nu::Reference<Nu::Lexing2::Special> Nu::Parsing3::Parser::ParseSpecialToken(Data& data_, It& it_, const Lexing2::Special::Value& value_)
+{
+	auto o = it_;
+
+	if (auto special = ParseToken<Lexing2::Special>(data_, it_))
+	{
+		if (value_ == Lexing2::Special::Value::None || special->GetValue() == value_)
+		{
+			return special;
+		}
+	}
+
+	it_ = o;
+	return nullptr;
+}
 inline Nu::Reference<Nu::Parsing3::Name> Nu::Parsing3::Parser::ExtractName(Data& data_, It& it_, const Reference<Scope>& scope_, const Reference<ParenthoodManager>& parenthoodManager_)
 {
 	auto o = it_;
@@ -616,14 +655,15 @@ inline Nu::Reference<Nu::Parsing3::Name> Nu::Parsing3::Parser::ExtractName(Data&
 	{
 		while (true)
 		{
-			if (auto specialMarker = ParseToken<Lexing2::Special>(data_, it_))
+			if (auto specialMarker = ParseSpecialToken(data_, it_, Lexing2::Special::Value::Dot))
 			{
-				if (specialMarker->GetValue() == Lexing2::Special::Value::Dot)
-				{
-					++dotsCount;
+				++dotsCount;
 
-					continue;
-				}
+				continue;
+			}
+			else
+			{
+
 			}
 
 			break;
@@ -674,14 +714,11 @@ inline Nu::Reference<Nu::Parsing3::Name> Nu::Parsing3::Parser::ExtractName(Data&
 						{
 							while (true)
 							{
-								if (auto specialMarker = ParseToken<Lexing2::Special>(data_, it_))
+								if (auto specialMarker = ParseSpecialToken(data_, it_, Lexing2::Special::Value::Dot))
 								{
-									if (specialMarker->GetValue() == Lexing2::Special::Value::Dot)
-									{
-										++dotsCount;
+									++dotsCount;
 
-										continue;
-									}
+									continue;
 								}
 
 								break;
@@ -1024,6 +1061,46 @@ inline Nu::Parsing3::Parser::Parser(const Reference<Parser>& this_):
 {
 }
 
+inline Nu::Reference<Nu::Parsing3::Markers::Delimiter> Nu::Parsing3::Parser::ExtractDelimiter(Data& data_, It& it_)
+{
+	auto o = it_;
+
+	if (auto special = ParseToken<Lexing2::Special>(data_, it_))
+	{
+		auto value = special->GetValue();
+
+		if (value == Lexing2::Special::Value::Semicolon)
+		{
+			auto delimiter = Make<Markers::Delimiter>();
+
+			return delimiter;
+		}
+	}
+
+	it_ = o;
+	return nullptr;
+}
+inline Nu::Reference<Nu::Parsing3::Markers::Delimiter> Nu::Parsing3::Parser::ParseDelimiter(Data& data_, It& it_)
+{
+	auto o = it_;
+
+	if (auto delimiter = ParseMarker<Markers::Delimiter>(data_, it_))
+	{
+		return delimiter;
+	}
+	else if (auto delimiter = ExtractDelimiter(data_, it_))
+	{
+		MarkersContainer::Markers markers;
+		{
+			markers.push_back(delimiter);
+		}
+
+		throw MarkersReplaceRequired(o, it_, markers);
+	}
+
+	it_ = o;
+	return nullptr;
+}
 inline Nu::Reference<Nu::Parsing3::Name> Nu::Parsing3::Parser::ParseName(Data& data_, It& it_, const Reference<Scope>& scope_)
 {
 	auto o = it_;
@@ -1320,6 +1397,10 @@ inline void Nu::Parsing3::Parser::Parse(const Reference<Root>& root_)
 			{
 				// do nothing
 			}
+			else if (auto delimiter = ParseDelimiter(markers, it))
+			{
+				// do nothing
+			}
 			else
 			{
 				throw Exception();
@@ -1362,6 +1443,10 @@ inline void Nu::Parsing3::Parser::Parse(const Reference<Space>& space_)
 				// do nothing
 			}
 			else if (auto declaration = ParseDeclaration(markers, it, space_))
+			{
+				// do nothing
+			}
+			else if (auto delimiter = ParseDelimiter(markers, it))
 			{
 				// do nothing
 			}
