@@ -847,6 +847,7 @@ namespace Testing
 					L"Verify that marker is delimiter"
 				);
 			}
+			
 			TEST_METHOD(Parser_Parse_SingleSpace)
 			{
 				auto parser = Make<Parser>();
@@ -937,17 +938,24 @@ namespace Testing
 
 				Assert::IsTrue(
 					markers.size() == 2,
-					L"Verify that there is 1 marker"
+					L"Verify that there is 2 markers"
 				);
 
+				auto space1 = UpCast<Parsing3::Space>(*markers.begin());
 				Assert::IsTrue(
-					UpCast<Parsing3::Space>(*markers.begin()) != nullptr,
+					space1 != nullptr,
+					L"Verify that marker is space"
+				);
+
+				auto space2 = UpCast<Parsing3::Space>(*(++markers.begin()));
+				Assert::IsTrue(
+					space2 != nullptr,
 					L"Verify that marker is space"
 				);
 
 				Assert::IsTrue(
-					UpCast<Parsing3::Space>(*(++markers.begin())) != nullptr,
-					L"Verify that marker is space"
+					space1 != space2,
+					L"Verify that spaces is different"
 				);
 			}
 			TEST_METHOD(Parser_Parse_SeveralSpacesWithDelimiter)
@@ -993,6 +1001,161 @@ namespace Testing
 					L"Verify that marker is space"
 				);
 			}
+			
+			TEST_METHOD(Parser_Parse_SingleSchema)
+			{
+				auto parser = Make<Parser>();
+
+				auto input = Make<Lexing2::Container>();
+				{
+					input->GetTokens().push_back(Make<Lexing2::Text>("schema"));
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure));
+				}
+
+				auto output = parser->Parse(input);
+				auto &names = output->GetNames();
+
+				Assert::IsTrue(
+					names.size() == 0,
+					L"Verify that names is empty"
+				);
+
+				auto &markers = output->GetMarkers();
+
+				Assert::IsTrue(
+					markers.size() == 1,
+					L"Verify that there is 1 marker"
+				);
+
+				Assert::IsTrue(
+					UpCast<Parsing3::Schema>(*markers.begin()) != nullptr,
+					L"Verify that marker is schema"
+				);
+			}
+			TEST_METHOD(Parser_Parse_SingleSchemaWithDelimiter)
+			{
+				auto parser = Make<Parser>();
+
+				auto input = Make<Lexing2::Container>();
+				{
+					input->GetTokens().push_back(Make<Lexing2::Text>("schema"));
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Semicolon));
+				}
+
+				auto output = parser->Parse(input);
+				auto &names = output->GetNames();
+
+				Assert::IsTrue(
+					names.size() == 0,
+					L"Verify that names is empty"
+				);
+
+				auto &markers = output->GetMarkers();
+
+				Assert::IsTrue(
+					markers.size() == 2,
+					L"Verify that there is 2 markers"
+				);
+
+				Assert::IsTrue(
+					UpCast<Parsing3::Schema>(*markers.begin()) != nullptr,
+					L"Verify that marker is schema"
+				);
+
+				Assert::IsTrue(
+					UpCast<Parsing3::Markers::Delimiter>(*(++markers.begin())) != nullptr,
+					L"Verify that marker is delimiter"
+				);
+			}
+			TEST_METHOD(Parser_Parse_SeveralSchemas)
+			{
+				auto parser = Make<Parser>();
+
+				auto input = Make<Lexing2::Container>();
+				{
+					input->GetTokens().push_back(Make<Lexing2::Text>("schema"));
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure));
+					input->GetTokens().push_back(Make<Lexing2::Text>("schema"));
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure));
+				}
+
+				auto output = parser->Parse(input);
+				auto &names = output->GetNames();
+
+				Assert::IsTrue(
+					names.size() == 0,
+					L"Verify that names is empty"
+				);
+
+				auto &markers = output->GetMarkers();
+
+				Assert::IsTrue(
+					markers.size() == 2,
+					L"Verify that there is 2 markers"
+				);
+
+				auto schema1 = UpCast<Parsing3::Schema>(*markers.begin());
+				Assert::IsTrue(
+					schema1 != nullptr,
+					L"Verify that marker is schema"
+				);
+
+				auto schema2 = UpCast<Parsing3::Schema>(*(++markers.begin()));
+				Assert::IsTrue(
+					schema2 != nullptr,
+					L"Verify that marker is schema"
+				);
+
+				Assert::IsTrue(
+					schema1 != schema2,
+					L"Verify that schemas is different"
+				);
+			}
+			TEST_METHOD(Parser_Parse_SeveralSchemasWithDelimiter)
+			{
+				auto parser = Make<Parser>();
+
+				auto input = Make<Lexing2::Container>();
+				{
+					input->GetTokens().push_back(Make<Lexing2::Text>("schema"));
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Semicolon));
+					input->GetTokens().push_back(Make<Lexing2::Text>("schema"));
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure));
+				}
+
+				auto output = parser->Parse(input);
+				auto &names = output->GetNames();
+
+				Assert::IsTrue(
+					names.size() == 0,
+					L"Verify that names is empty"
+				);
+
+				auto &markers = output->GetMarkers();
+
+				Assert::IsTrue(
+					markers.size() == 3,
+					L"Verify that there is 3 markers"
+				);
+
+				Assert::IsTrue(
+					UpCast<Parsing3::Schema>(*markers.begin()) != nullptr,
+					L"Verify that marker is schema"
+				);
+
+				Assert::IsTrue(
+					UpCast<Parsing3::Markers::Delimiter>(*(++markers.begin())) != nullptr,
+					L"Verify that marker is delimiter"
+				);
+
+				Assert::IsTrue(
+					UpCast<Parsing3::Schema>(*(++(++markers.begin()))) != nullptr,
+					L"Verify that marker is schema"
+				);
+			}
+
 			TEST_METHOD(Parser_Parse_SingleName_KeywordAlias)
 			{
 				auto parser = Make<Parser>();
@@ -1174,6 +1337,50 @@ namespace Testing
 					L"Verify that value is space"
 				);
 			}
+			TEST_METHOD(Parser_Parse_SingleName_SchemaDeclaration)
+			{
+				auto parser = Make<Parser>();
+
+				auto input = Make<Lexing2::Container>();
+				{
+					input->GetTokens().push_back(Make<Lexing2::Text>("a"));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+					input->GetTokens().push_back(Make<Lexing2::Text>("schema"));
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure));
+				}
+
+				auto output = parser->Parse(input);
+				auto &names = output->GetNames();
+
+				Assert::IsTrue(
+					names.size() == 1,
+					L"Verify that there is 1 name"
+				);
+
+				auto nameIt = names.find("a");
+
+				Assert::IsTrue(
+					nameIt != names.end(),
+					L"Verify that there is name \"a\""
+				);
+
+				auto levels = (*nameIt).second;
+				auto levelsIt = levels.find(0);
+
+				Assert::IsTrue(
+					levelsIt != levels.end(),
+					L"Verify that there is level 0"
+				);
+
+				auto name = (*levelsIt).second;
+				auto value = parser->parenthoodManager->GetValue(name);
+				auto schema = UpCast<Parsing3::Schema>(value);
+
+				Assert::IsTrue(
+					schema != nullptr,
+					L"Verify that value is schema"
+				);
+			}
 			TEST_METHOD(Parser_Parse_SeveralNames_SpaceAlias)
 			{
 				auto parser = Make<Parser>();
@@ -1258,6 +1465,91 @@ namespace Testing
 					L"Verify that value is space"
 				);
 			}
+			TEST_METHOD(Parser_Parse_SeveralNames_SchemaAlias)
+			{
+				auto parser = Make<Parser>();
+
+				auto input = Make<Lexing2::Container>();
+				{
+					input->GetTokens().push_back(Make<Lexing2::Text>("a"));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+					input->GetTokens().push_back(Make<Lexing2::Text>("schema"));
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure));
+					input->GetTokens().push_back(Make<Lexing2::Text>("b"));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+					input->GetTokens().push_back(Make<Lexing2::Text>("a"));
+				}
+
+				auto output = parser->Parse(input);
+				auto &names = output->GetNames();
+
+				auto nameIt = names.find("b");
+
+				Assert::IsTrue(
+					nameIt != names.end(),
+					L"Verify that there is name \"b\""
+				);
+
+				auto levels = (*nameIt).second;
+				auto levelsIt = levels.find(0);
+
+				Assert::IsTrue(
+					levelsIt != levels.end(),
+					L"Verify that there is level 0"
+				);
+
+				auto name = (*levelsIt).second;
+				auto value = parser->parenthoodManager->GetValue(name);
+				auto schema = UpCast<Parsing3::Schema>(value);
+
+				Assert::IsTrue(
+					schema != nullptr,
+					L"Verify that value is schema"
+				);
+			}
+			TEST_METHOD(Parser_Parse_SeveralNames_SchemaAliasForwardDeclaration)
+			{
+				auto parser = Make<Parser>();
+
+				auto input = Make<Lexing2::Container>();
+				{
+					input->GetTokens().push_back(Make<Lexing2::Text>("a"));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+					input->GetTokens().push_back(Make<Lexing2::Text>("b"));
+					input->GetTokens().push_back(Make<Lexing2::Text>("b"));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+					input->GetTokens().push_back(Make<Lexing2::Text>("schema"));
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure));
+				}
+
+				auto output = parser->Parse(input);
+				auto &names = output->GetNames();
+
+				auto nameIt = names.find("a");
+
+				Assert::IsTrue(
+					nameIt != names.end(),
+					L"Verify that there is name \"a\""
+				);
+
+				auto levels = (*nameIt).second;
+				auto levelsIt = levels.find(0);
+
+				Assert::IsTrue(
+					levelsIt != levels.end(),
+					L"Verify that there is level 0"
+				);
+
+				auto name = (*levelsIt).second;
+				auto value = parser->parenthoodManager->GetValue(name);
+				auto schema = UpCast<Parsing3::Schema>(value);
+
+				Assert::IsTrue(
+					schema != nullptr,
+					L"Verify that value is schema"
+				);
+			}
+			
 			TEST_METHOD(Parser_Parse_KeywordAliasAndUsage)
 			{
 				auto parser = Make<Parser>();
@@ -1300,7 +1592,8 @@ namespace Testing
 					L"Verify that value is space"
 				);
 			}
-			TEST_METHOD(Parser_Parse_NestedSpace)
+			
+			TEST_METHOD(Parser_Parse_NestedSpaceInsideSpace)
 			{
 				auto parser = Make<Parser>();
 
@@ -1368,6 +1661,211 @@ namespace Testing
 					L"Verify that value is space"
 				);
 			}
+			TEST_METHOD(Parser_Parse_NestedSchemaInsideSpace)
+			{
+				auto parser = Make<Parser>();
+
+				auto input = Make<Lexing2::Container>();
+				{
+					Lexing2::Container::Tokens nested;
+					{
+						nested.push_back(Make<Lexing2::Text>("b"));
+						nested.push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+						nested.push_back(Make<Lexing2::Text>("schema"));
+						nested.push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure));
+					}
+
+					input->GetTokens().push_back(Make<Lexing2::Text>("a"));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+					input->GetTokens().push_back(Make<Lexing2::Text>("space"));
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure, nested));
+				}
+
+				auto output = parser->Parse(input);
+				auto &names = output->GetNames();
+
+				auto nameIt = names.find("a");
+
+				Assert::IsTrue(
+					nameIt != names.end(),
+					L"Verify that there is name \"a\""
+				);
+
+				auto levels = (*nameIt).second;
+				auto levelsIt = levels.find(0);
+
+				Assert::IsTrue(
+					levelsIt != levels.end(),
+					L"Verify that there is level 0"
+				);
+
+				auto name = (*levelsIt).second;
+				auto value = parser->parenthoodManager->GetValue(name);
+				auto space = UpCast<Parsing3::Space>(value);
+
+				auto &names2 = space->GetNames();
+
+				auto nameIt2 = names2.find("b");
+
+				Assert::IsTrue(
+					nameIt2 != names2.end(),
+					L"Verify that there is name \"b\""
+				);
+
+				auto levels2 = (*nameIt2).second;
+				auto levelsIt2 = levels2.find(0);
+
+				Assert::IsTrue(
+					levelsIt2 != levels2.end(),
+					L"Verify that there is level 0"
+				);
+
+				auto name2 = (*levelsIt2).second;
+				auto value2 = parser->parenthoodManager->GetValue(name2);
+				auto schema2 = UpCast<Parsing3::Schema>(value2);
+
+				Assert::IsTrue(
+					schema2 != nullptr,
+					L"Verify that value is schema"
+				);
+			}
+			TEST_METHOD(Parser_Parse_NestedSpaceInsideSchema)
+			{
+				auto parser = Make<Parser>();
+
+				auto input = Make<Lexing2::Container>();
+				{
+					Lexing2::Container::Tokens nested;
+					{
+						nested.push_back(Make<Lexing2::Text>("b"));
+						nested.push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+						nested.push_back(Make<Lexing2::Text>("space"));
+						nested.push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure));
+					}
+
+					input->GetTokens().push_back(Make<Lexing2::Text>("a"));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+					input->GetTokens().push_back(Make<Lexing2::Text>("schema"));
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure, nested));
+				}
+
+				auto output = parser->Parse(input);
+				auto &names = output->GetNames();
+
+				auto nameIt = names.find("a");
+
+				Assert::IsTrue(
+					nameIt != names.end(),
+					L"Verify that there is name \"a\""
+				);
+
+				auto levels = (*nameIt).second;
+				auto levelsIt = levels.find(0);
+
+				Assert::IsTrue(
+					levelsIt != levels.end(),
+					L"Verify that there is level 0"
+				);
+
+				auto name = (*levelsIt).second;
+				auto value = parser->parenthoodManager->GetValue(name);
+				auto schema = UpCast<Parsing3::Schema>(value);
+
+				auto &names2 = schema->GetNames();
+
+				auto nameIt2 = names2.find("b");
+
+				Assert::IsTrue(
+					nameIt2 != names2.end(),
+					L"Verify that there is name \"b\""
+				);
+
+				auto levels2 = (*nameIt2).second;
+				auto levelsIt2 = levels2.find(0);
+
+				Assert::IsTrue(
+					levelsIt2 != levels2.end(),
+					L"Verify that there is level 0"
+				);
+
+				auto name2 = (*levelsIt2).second;
+				auto value2 = parser->parenthoodManager->GetValue(name2);
+				auto space = UpCast<Parsing3::Space>(value2);
+
+				Assert::IsTrue(
+					space != nullptr,
+					L"Verify that value is space"
+				);
+			}
+			TEST_METHOD(Parser_Parse_NestedSchemaInsideSchema)
+			{
+				auto parser = Make<Parser>();
+
+				auto input = Make<Lexing2::Container>();
+				{
+					Lexing2::Container::Tokens nested;
+					{
+						nested.push_back(Make<Lexing2::Text>("b"));
+						nested.push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+						nested.push_back(Make<Lexing2::Text>("schema"));
+						nested.push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure));
+					}
+
+					input->GetTokens().push_back(Make<Lexing2::Text>("a"));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+					input->GetTokens().push_back(Make<Lexing2::Text>("schema"));
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure, nested));
+				}
+
+				auto output = parser->Parse(input);
+				auto &names = output->GetNames();
+
+				auto nameIt = names.find("a");
+
+				Assert::IsTrue(
+					nameIt != names.end(),
+					L"Verify that there is name \"a\""
+				);
+
+				auto levels = (*nameIt).second;
+				auto levelsIt = levels.find(0);
+
+				Assert::IsTrue(
+					levelsIt != levels.end(),
+					L"Verify that there is level 0"
+				);
+
+				auto name = (*levelsIt).second;
+				auto value = parser->parenthoodManager->GetValue(name);
+				auto schema = UpCast<Parsing3::Schema>(value);
+
+				auto &names2 = schema->GetNames();
+
+				auto nameIt2 = names2.find("b");
+
+				Assert::IsTrue(
+					nameIt2 != names2.end(),
+					L"Verify that there is name \"b\""
+				);
+
+				auto levels2 = (*nameIt2).second;
+				auto levelsIt2 = levels2.find(0);
+
+				Assert::IsTrue(
+					levelsIt2 != levels2.end(),
+					L"Verify that there is level 0"
+				);
+
+				auto name2 = (*levelsIt2).second;
+				auto value2 = parser->parenthoodManager->GetValue(name2);
+				auto schema2 = UpCast<Parsing3::Schema>(value2);
+
+				Assert::IsTrue(
+					schema2 != nullptr,
+					L"Verify that value is schema"
+				);
+			}
+			
 			TEST_METHOD(Parser_Parse_AccesingNestedUnit)
 			{
 				auto parser = Make<Parser>();
@@ -1483,6 +1981,44 @@ namespace Testing
 				Assert::IsTrue(
 					keyword != nullptr,
 					L"Verify that value is keyword"
+				);
+			}
+		};
+
+		TEST_CLASS(Regression)
+		{
+		public:
+			TEST_METHOD(Bug01_ParsingOfContentOfUnnamedSpace)
+			{
+				auto parser = Make<Parser>();
+
+				auto input = Make<Lexing2::Container>();
+				{
+					input->GetTokens().push_back(Make<Lexing2::Text>("space"));
+
+					Lexing2::Container::Tokens x;
+					{
+						x.push_back(Make<Lexing2::Text>("b"));
+						x.push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+						x.push_back(Make<Lexing2::Text>("space"));
+						x.push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Semicolon));
+					}
+
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure, x));
+				}
+
+				auto output = parser->Parse(input);
+				auto &markers = output->GetMarkers();
+				auto &names = output->GetNames();
+
+				auto outerSpace = UpCast<Parsing3::Space>(*markers.begin());
+				auto &outerSpaceNames = outerSpace->GetNames();
+
+				auto b = parser->parenthoodManager->GetValue(outerSpaceNames["b"][0]);
+				
+				Assert::IsTrue(
+					b != nullptr,
+					L"Verify that value is not empty"
 				);
 			}
 		};
