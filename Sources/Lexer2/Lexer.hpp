@@ -56,6 +56,7 @@ namespace Nu
 			inline Container() = delete;
 			inline Container(const Container&) = delete;
 			inline Container(const Reference<Container>& this_, const Tokens& tokens_ = Tokens());
+			inline Container(const Reference<Container>& this_, Initializer<Reference<Token>>&& tokens_);
 			virtual ~Container() override = default;
 		public:
 			inline Container& operator = (const Container&) = delete;
@@ -186,6 +187,10 @@ inline Nu::Lexing2::Text::Value Nu::Lexing2::Text::GetValue() const
 inline Nu::Lexing2::Container::Container(const Reference<Container>& this_, const Tokens& tokens_) :
 	Entity(this_),
 	tokens(tokens_)
+{
+}
+inline Nu::Lexing2::Container::Container(const Reference<Container>& this_, Initializer<Reference<Token>>&& tokens_):
+	Container(this_, Move(static_cast<Tokens>(tokens_)))
 {
 }
 

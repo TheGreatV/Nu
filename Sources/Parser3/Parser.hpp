@@ -26,6 +26,8 @@ namespace Nu
 		class Unit;
 		class Keyword;
 		class Scope;
+		class Space;
+		class Schema;
 		class ParenthoodManager;
 		class Parser;
 
@@ -151,6 +153,7 @@ namespace Nu
 			{
 				None,
 				Space,
+				Schema,
 			};
 		protected:
 			const Value value;
@@ -194,6 +197,19 @@ namespace Nu
 			virtual ~Space() override = default;
 		public:
 			inline Space& operator = (const Space&) = delete;
+		};
+		class Schema:
+			public Marker,
+			public Scope,
+			public MarkersContainer
+		{
+		public:
+			inline Schema() = delete;
+			inline Schema(const Reference<Schema>& this_, const Markers& markers_ = Markers());
+			inline Schema(const Schema&) = delete;
+			virtual ~Schema() override = default;
+		public:
+			inline Schema& operator = (const Schema&) = delete;
 		};
 		class Root:
 			public Scope,
@@ -266,10 +282,14 @@ namespace Nu
 			inline Reference<Markers::Declaration> ParseDeclaration(Data& data_, It& it_, const Reference<Scope>& scope_);
 			inline Reference<Space> ExtractSpaceDeclaration(Data& data_, It& it_, const Reference<Scope>& scope_);
 			inline Reference<Space> ParseSpace(Data& data_, It& it_, const Reference<Scope>& scope_);
+			inline Reference<Schema> ExtractSchemaDeclaration(Data& data_, It& it_, const Reference<Scope>& scope_);
+			inline Reference<Schema> ParseSchema(Data& data_, It& it_, const Reference<Scope>& scope_);
 			inline void Preparse(const Reference<Root>& root_);
 			inline void Preparse(const Reference<Space>& space_);
+			inline void Preparse(const Reference<Schema>& schema_);
 			inline void Parse(const Reference<Root>& root_);
 			inline void Parse(const Reference<Space>& space_);
+			inline void Parse(const Reference<Schema>& schema_);
 		public:
 			inline Output Parse(const Input& input_);
 		};
@@ -458,6 +478,17 @@ inline Nu::Reference<Nu::Parsing3::Name> Nu::Parsing3::Scope::Add(const Name::Va
 #pragma region Space
 
 inline Nu::Parsing3::Space::Space(const Reference<Space>& this_, const Markers& markers_):
+	Marker(this_),
+	Scope(this_),
+	MarkersContainer(this_, markers_)
+{
+}
+
+#pragma endregion
+
+#pragma region Schema
+
+inline Nu::Parsing3::Schema::Schema(const Reference<Schema>& this_, const Markers& markers_):
 	Marker(this_),
 	Scope(this_),
 	MarkersContainer(this_, markers_)
@@ -845,216 +876,6 @@ inline Nu::Reference<Nu::Parsing3::Name> Nu::Parsing3::Parser::ExtractName(Data&
 	it_ = o;
 	return nullptr;
 }
-/*inline Nu::Reference<Nu::Parsing3::Name> Nu::Parsing3::Parser::ExtractName(Data& data_, It& it_, const Reference<Scope>& scope_, const Reference<ParenthoodManager>& parenthoodManager_)
-{
-	auto o = it_;
-
-	Size dotsCount = 0;
-	{
-		while (true)
-		{
-			if (auto specialMarker = ParseToken<Lexing2::Special>(data_, it_))
-			{
-				if (specialMarker->GetValue() == Lexing2::Special::Value::Dot)
-				{
-					++dotsCount;
-
-					continue;
-				}
-			}
-
-			break;
-		}
-	}
-
-	if (auto text = ParseToken<Lexing2::Text>(data_, it_))
-	{
-		auto value = text->GetValue();
-		auto names = parenthoodManager_->GetNames(scope_);
-		auto namesByLength = Vector<Name::Value>();
-		{
-			for (auto &i : names)
-			{
-				auto &value = i.first;
-
-				if (std::find(namesByLength.begin(), namesByLength.end(), value) == namesByLength.end())
-				{
-					namesByLength.push_back(value);
-				}
-			}
-
-			std::sort(namesByLength.begin(), namesByLength.end(), [](const Name::Value& a, const Name::Value& b) { return a.length() > b.length(); });
-		}
-
-		for (auto &nameValue : namesByLength)
-		{
-			if (value.find(nameValue) == 0)
-			{
-				auto &levels = names[nameValue];
-				auto j = levels.find(dotsCount);
-				
-				if (j == levels.end())
-				{
-					throw Exception(); // TODO
-				}
-
-				auto name = (*j).second;
-
-				if (value.size() == nameValue.size())
-				{
-					auto lastName = name;
-
-					// child chain
-					while (true)
-					{
-						if (auto special = ParseToken<Lexing2::Special>(data_, it_))
-						{
-							if (special->GetValue() == Lexing2::Special::Value::Dot)
-							{
-								auto o2 = it_;
-
-								if (auto text = ParseToken<Lexing2::Text>(data_, it_))
-								{
-									auto textValue = text->GetValue();
-									auto parentUnit = parenthoodManager_->GetValue(lastName);
-
-									if (parentUnit)
-									{
-										auto scope = UpCast<Scope>(parentUnit);
-
-										if (scope)
-										{
-											auto names = parenthoodManager_->GetNames(scope);
-											auto namesByLength = Vector<Name::Value>();
-											{
-												for (auto &i : names)
-												{
-													auto &value = i.first;
-
-													if (std::find(namesByLength.begin(), namesByLength.end(), value) == namesByLength.end())
-													{
-														namesByLength.push_back(value);
-													}
-												}
-
-												std::sort(namesByLength.begin(), namesByLength.end(), [](const Name::Value& a, const Name::Value& b)
-												{
-													return a.length() > b.length();
-												});
-											}
-
-											lastName = [&]()
-											{
-												for (auto &nameValue : namesByLength)
-												{
-													if (textValue.find(nameValue) == 0)
-													{
-														auto &levels = names[nameValue];
-														auto j = levels.find(0);
-
-														if (j == levels.end())
-														{
-															throw Exception(); // TODO
-														}
-
-														auto childName = (*j).second;
-
-														if (textValue.size() == nameValue.size())
-														{
-															return childName;
-														}
-														else
-														{
-															auto markers = Data();
-															{
-																markers.push_back(Make<Markers::Token>(Make<Lexing2::Text>(nameValue)));
-																markers.push_back(Make<Markers::Token>(Make<Lexing2::Text>(textValue.substr(nameValue.size()))));
-															}
-
-															throw MarkersReplaceRequired(o2, it_, markers);
-														}
-													}
-												}
-
-												// no matches found
-												throw Exception(); // TODO
-											}();
-										}
-										else
-										{
-											throw Exception(); // TODO
-										}
-									}
-									else
-									{
-										while (true)
-										{
-											if (auto special = ParseToken<Lexing2::Special>(data_, it_))
-											{
-												if (special->GetValue() == Lexing2::Special::Value::Dot)
-												{
-													auto o2 = it_;
-
-													if (auto text = ParseToken<Lexing2::Text>(data_, it_))
-													{
-														continue;
-													}
-													else
-													{
-														throw Exception();
-													}
-												}
-												else
-												{
-													break;
-												}
-											}
-											else
-											{
-												break;
-											}
-										}
-
-										throw MarkersSkipRequired(o2, it_);
-									}
-								}
-								else
-								{
-									throw Exception(); // TODO
-								}
-							}
-							else
-							{
-								break;
-							}
-						}
-						else
-						{
-							break;
-						}
-					}
-
-					return lastName;
-				}
-				else
-				{
-					auto markers = Data();
-					{
-						markers.push_back(Make<Markers::Token>(Make<Lexing2::Text>(nameValue)));
-						markers.push_back(Make<Markers::Token>(Make<Lexing2::Text>(value.substr(nameValue.size()))));
-					}
-
-					throw MarkersReplaceRequired(o, it_, markers);
-				}
-			}
-		}
-
-		throw Exception(); // TODO
-	}
-
-	it_ = o;
-	return nullptr;
-}*/
 
 inline Nu::Parsing3::Parser::Parser(const Reference<Parser>& this_):
 	Entity(this_)
@@ -1198,6 +1019,19 @@ inline Nu::Reference<Nu::Parsing3::Markers::Declaration> Nu::Parsing3::Parser::P
 
 			throw MarkersReplaceRequired(o, it_, markers);
 		}
+		else if (auto schema = ParseSchema(data_, it_, scope_))
+		{
+			auto declaration = Make<Markers::Declaration>(declarationName, schema);
+
+			parenthoodManager->SetValue(declarationName, schema);
+
+			MarkersContainer::Markers markers;
+			{
+				markers.push_back(declaration);
+			}
+
+			throw MarkersReplaceRequired(o, it_, markers);
+		}
 		else if (auto keyword = ParseKeyword(data_, it_, scope_))
 		{
 			auto declaration = Make<Markers::Declaration>(declarationName, keyword);
@@ -1246,6 +1080,7 @@ inline Nu::Reference<Nu::Parsing3::Markers::Declaration> Nu::Parsing3::Parser::P
 	it_ = o;
 	return nullptr;
 }
+
 inline Nu::Reference<Nu::Parsing3::Space> Nu::Parsing3::Parser::ExtractSpaceDeclaration(Data& data_, It& it_, const Reference<Scope>& scope_)
 {
 	auto o = it_;
@@ -1256,7 +1091,7 @@ inline Nu::Reference<Nu::Parsing3::Space> Nu::Parsing3::Parser::ExtractSpaceDecl
 		{
 			if (group->GetOpening() == Lexing2::Group::BraceType::Figure && group->GetClosing() == Lexing2::Group::BraceType::Figure)
 			{
-				// replace with RepaceRequire?
+				// replace with ReplaceRequire?
 				auto markers = Move(Convert(group->GetTokens()));
 				auto space = Make<Space>(Move(markers));
 				{
@@ -1281,7 +1116,7 @@ inline Nu::Reference<Nu::Parsing3::Space> Nu::Parsing3::Parser::ParseSpace(Data&
 
 	if (auto space = ParseMarker<Space>(data_, it_))
 	{
-		// TODO: parse space
+		Parse(space);
 
 		return space;
 	}
@@ -1290,6 +1125,59 @@ inline Nu::Reference<Nu::Parsing3::Space> Nu::Parsing3::Parser::ParseSpace(Data&
 		MarkersContainer::Markers markers;
 		{
 			markers.push_back(spaceDeclaration);
+		}
+
+		throw MarkersReplaceRequired(o, it_, markers);
+	}
+
+	it_ = o;
+	return nullptr;
+}
+
+inline Nu::Reference<Nu::Parsing3::Schema> Nu::Parsing3::Parser::ExtractSchemaDeclaration(Data& data_, It& it_, const Reference<Scope>& scope_)
+{
+	auto o = it_;
+
+	if (auto keyword = ParseKeyword(data_, it_, scope_, Keyword::Value::Schema))
+	{
+		if (auto group = ParseToken<Lexing2::Group>(data_, it_))
+		{
+			if (group->GetOpening() == Lexing2::Group::BraceType::Figure && group->GetClosing() == Lexing2::Group::BraceType::Figure)
+			{
+				// replace with ReplaceRequire?
+				auto markers = Move(Convert(group->GetTokens()));
+				auto schema = Make<Schema>(Move(markers));
+				{
+					parenthoodManager->SetParent(schema, scope_);
+				}
+
+				return schema;
+			}
+			else
+			{
+				throw Exception();
+			}
+		}
+	}
+
+	it_ = o;
+	return nullptr;
+}
+inline Nu::Reference<Nu::Parsing3::Schema> Nu::Parsing3::Parser::ParseSchema(Data& data_, It& it_, const Reference<Scope>& scope_)
+{
+	auto o = it_;
+
+	if (auto schema = ParseMarker<Schema>(data_, it_))
+	{
+		Parse(schema);
+
+		return schema;
+	}
+	else if (auto schemaDeclaration = ExtractSchemaDeclaration(data_, it_, scope_))
+	{
+		MarkersContainer::Markers markers;
+		{
+			markers.push_back(schemaDeclaration);
 		}
 
 		throw MarkersReplaceRequired(o, it_, markers);
@@ -1375,6 +1263,44 @@ inline void Nu::Parsing3::Parser::Preparse(const Reference<Space>& space_)
 		}
 	}
 }
+inline void Nu::Parsing3::Parser::Preparse(const Reference<Schema>& schema_)
+{
+	auto &markers = schema_->GetMarkers();
+	auto it = markers.begin();
+
+	while (it != markers.end())
+	{
+		try
+		{
+			auto o = it;
+
+			if (auto declarationHeader = ExtractDeclarationHeader(markers, it, schema_))
+			{
+				MarkersContainer::Markers markers;
+				{
+					markers.push_back(declarationHeader);
+				}
+
+				throw MarkersReplaceRequired(o, it, markers);
+			}
+			else
+			{
+				++it;
+			}
+		}
+		catch (MarkersReplaceRequired replace)
+		{
+			auto i = markers.erase(replace.begin, replace.end);
+
+			for (auto &m : replace.markers)
+			{
+				i = markers.insert(i, m);
+			}
+
+			it = markers.begin();
+		}
+	}
+}
 
 inline void Nu::Parsing3::Parser::Parse(const Reference<Root>& root_)
 {
@@ -1390,6 +1316,10 @@ inline void Nu::Parsing3::Parser::Parse(const Reference<Root>& root_)
 			auto o = it;
 
 			if (auto space = ParseSpace(markers, it, root_))
+			{
+				// do nothing
+			}
+			else if (auto schema = ParseSchema(markers, it, root_))
 			{
 				// do nothing
 			}
@@ -1442,7 +1372,64 @@ inline void Nu::Parsing3::Parser::Parse(const Reference<Space>& space_)
 			{
 				// do nothing
 			}
+			else if (auto schema = ParseSchema(markers, it, space_))
+			{
+				// do nothing
+			}
 			else if (auto declaration = ParseDeclaration(markers, it, space_))
+			{
+				// do nothing
+			}
+			else if (auto delimiter = ParseDelimiter(markers, it))
+			{
+				// do nothing
+			}
+			else
+			{
+				throw Exception();
+			}
+		}
+		catch (MarkersReplaceRequired replace)
+		{
+			auto i = markers.erase(replace.begin, replace.end);
+
+			for (auto &m : replace.markers)
+			{
+				i = markers.insert(i, m);
+			}
+
+			it = markers.begin();
+		}
+		catch (MarkersSkipRequired skip)
+		{
+			isMarkerSkipped = true;
+
+			it = skip.end;
+		}
+	}
+}
+inline void Nu::Parsing3::Parser::Parse(const Reference<Schema>& schema_)
+{
+	Preparse(schema_);
+
+	auto &markers = schema_->GetMarkers();
+	auto it = markers.begin();
+
+	while (it != markers.end())
+	{
+		try
+		{
+			auto o = it;
+
+			if (auto schema = ParseSchema(markers, it, schema_))
+			{
+				// do nothing
+			}
+			else if (auto schema = ParseSchema(markers, it, schema_))
+			{
+				// do nothing
+			}
+			else if (auto declaration = ParseDeclaration(markers, it, schema_))
 			{
 				// do nothing
 			}
@@ -1485,6 +1472,13 @@ inline Nu::Parsing3::Parser::Output Nu::Parsing3::Parser::Parse(const Input& inp
 		auto spaceKeyword = Make<Keyword>(Keyword::Value::Space);
 
 		parenthoodManager->SetValue(spaceName, spaceKeyword);
+	}
+	auto schemaNameValue = Name::Value("schema");
+	{
+		auto schemaName = root->Add(schemaNameValue);
+		auto schemaKeyword = Make<Keyword>(Keyword::Value::Schema);
+
+		parenthoodManager->SetValue(schemaName, schemaKeyword);
 	}
 
 	auto mainNameValue = Name::Value(".main");
