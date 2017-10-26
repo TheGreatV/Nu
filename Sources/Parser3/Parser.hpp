@@ -154,6 +154,7 @@ namespace Nu
 				None,
 				Space,
 				Schema,
+				Make,
 			};
 		protected:
 			const Value value;
@@ -1479,6 +1480,13 @@ inline Nu::Parsing3::Parser::Output Nu::Parsing3::Parser::Parse(const Input& inp
 		auto schemaKeyword = Make<Keyword>(Keyword::Value::Schema);
 
 		parenthoodManager->SetValue(schemaName, schemaKeyword);
+	}
+	auto makeNameValue = Name::Value("make");
+	{
+		auto makeName = root->Add(makeNameValue);
+		auto makeKeyword = Make<Keyword>(Keyword::Value::Make);
+
+		parenthoodManager->SetValue(makeName, makeKeyword);
 	}
 
 	auto mainNameValue = Name::Value(".main");
