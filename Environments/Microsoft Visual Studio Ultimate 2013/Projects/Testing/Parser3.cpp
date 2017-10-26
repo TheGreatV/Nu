@@ -1983,6 +1983,50 @@ namespace Testing
 					L"Verify that value is keyword"
 				);
 			}
+			TEST_METHOD(Parser_Parse_AccesingPreviousUnitOfSchema)
+			{
+				auto parser = Make<Parser>();
+
+				auto input = Make<Lexing2::Container>();
+				{
+					Lexing2::Container::Tokens nested;
+					{
+						nested.push_back(Make<Lexing2::Text>("a"));
+						nested.push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+						nested.push_back(Make<Lexing2::Text>("space"));
+						nested.push_back(Make<Lexing2::Text>("a"));
+						nested.push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+						nested.push_back(Make<Lexing2::Text>("space"));
+						nested.push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure));
+					}
+
+					input->GetTokens().push_back(Make<Lexing2::Text>("b"));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+					input->GetTokens().push_back(Make<Lexing2::Text>("schema"));
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure, nested));
+					input->GetTokens().push_back(Make<Lexing2::Text>("c"));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+					input->GetTokens().push_back(Make<Lexing2::Text>("b"));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Dot));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Dot));
+					input->GetTokens().push_back(Make<Lexing2::Text>("a"));
+				}
+
+				auto output = parser->Parse(input);
+				auto &names = output->GetNames();
+
+				auto nameIt = names.find("c");
+				auto levels = (*nameIt).second;
+				auto levelsIt = levels.find(0);
+				auto name = (*levelsIt).second;
+				auto value = parser->parenthoodManager->GetValue(name);
+				auto keyword = UpCast<Parsing3::Keyword>(value);
+
+				Assert::IsTrue(
+					keyword != nullptr,
+					L"Verify that value is keyword"
+				);
+			}
 		};
 
 		TEST_CLASS(Regression)
