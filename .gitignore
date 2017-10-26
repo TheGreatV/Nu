@@ -7,3 +7,5 @@ _Intermediate
 *.suo
 *.sdf
 *.opensdf
+*.coverage
+*.ipch
