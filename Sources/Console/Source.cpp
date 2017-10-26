@@ -2,11 +2,12 @@
 #include <fstream>
 
 #include <../Cleaner/Cleaner.hpp>
-#include <../Parser/Parser.hpp>
-#include <../Lexer/Lexer.hpp>
+#include <../Parser3/Parser.hpp>
+#include <../Lexer2/Lexer.hpp>
 using namespace Nu;
 
 
+/*
 void print(const Reference<NamesDeclarationStage::Marker>& marker)
 {
 	static int tab = 0;
@@ -143,10 +144,11 @@ void print(const Reference<Lexing::Token>& token)
 		std::cout << identifier->GetName() << std::endl;
 	}
 }
-
+*/
 
 void main()
 {
+	/*
 	NamesDeclarationStage::Parser::Source source;
 	{
 		std::ifstream file(L"../../../../Media/Source.ν"); // relative to project (.vcxproj)
@@ -173,6 +175,17 @@ void main()
 	// auto tokenScope = lexer->Parse(nameScope);
 	// std::cout << "tokens:" << std::endl;
 	// print(Cast<Lexing::Scope>(tokenScope));
+	*/
+
+	auto code = String() +
+		"a: space {" +
+		"}" +
+		"";
+	auto lexer = Make<Lexing2::Lexer>();
+	auto parser = Make<Parsing3::Parser>();
+
+	auto tokens = lexer->Parse(code);
+	auto root = parser->Parse(tokens);
 
 	std::system("pause");
 }
