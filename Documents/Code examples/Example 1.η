@@ -1,0 +1,29 @@
+# schemas declarations
+schema "a";
+
+# schemas definitions
+"a": {};
+
+# algorithms declarations
+algorithm "none" 'f'();
+algorithm "none" 'g'("a");
+algorithm "a" 'h'();
+
+# algorithms definitions
+'f': () {
+    return;
+};
+'g': ($0) {
+    call 'f'();
+    
+    %0: call 'h'();
+    delete %0;
+
+    return;
+};
+'h': () {
+    %0: create "a";
+    return %0;
+};
+    
+
