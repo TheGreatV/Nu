@@ -1275,19 +1275,7 @@ inline void Nu::Parsing3::Parser::Preparse(const Reference<Schema>& schema_)
 		{
 			auto o = it;
 
-			if (auto declarationHeader = ExtractDeclarationHeader(markers, it, schema_))
-			{
-				MarkersContainer::Markers markers;
-				{
-					markers.push_back(declarationHeader);
-				}
-
-				throw MarkersReplaceRequired(o, it, markers);
-			}
-			else
-			{
-				++it;
-			}
+			++it;
 		}
 		catch (MarkersReplaceRequired replace)
 		{
@@ -1422,19 +1410,7 @@ inline void Nu::Parsing3::Parser::Parse(const Reference<Schema>& schema_)
 		{
 			auto o = it;
 
-			if (auto schema = ParseSchema(markers, it, schema_))
-			{
-				// do nothing
-			}
-			else if (auto schema = ParseSchema(markers, it, schema_))
-			{
-				// do nothing
-			}
-			else if (auto declaration = ParseDeclaration(markers, it, schema_))
-			{
-				// do nothing
-			}
-			else if (auto delimiter = ParseDelimiter(markers, it))
+			if (auto delimiter = ParseDelimiter(markers, it))
 			{
 				// do nothing
 			}
