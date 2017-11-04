@@ -293,6 +293,7 @@ inline Nu::Lexing2::Group::BraceType Nu::Lexing2::Lexer::ExtractClosingBraceType
 inline bool Nu::Lexing2::Lexer::IsWhitespace(const Glyph& glyph_)
 {
 	return 
+		glyph_ == 32 ||
 		glyph_ == ' ' ||
 		glyph_ == '\t' ||
 		glyph_ == '\r' ||
@@ -551,7 +552,7 @@ inline Nu::Lexing2::Lexer::Output Nu::Lexing2::Lexer::Parse(const Input& input_)
 		tokens.push_back(token);
 	}
 
-	SkipWhitespaces(input_, it);
+	it = SkipWhitespaces(input_, it);
 
 	if (it != input_.end())
 	{
