@@ -28,6 +28,8 @@ namespace Nu
 		class Scope;
 		class Space;
 		class Schema;
+		class Algorithm;
+		class BraceAlgorithm;
 		class ParenthoodManager;
 		class Parser;
 
@@ -154,6 +156,7 @@ namespace Nu
 				None,
 				Space,
 				Schema,
+				Algorithm,
 				Make,
 			};
 		protected:
@@ -205,12 +208,64 @@ namespace Nu
 			public MarkersContainer
 		{
 		public:
+			using Algorithms = Vector<Reference<Algorithm>>;
+		protected:
+			Algorithms algorithms;
+		public:
 			inline Schema() = delete;
 			inline Schema(const Reference<Schema>& this_, const Markers& markers_ = Markers());
 			inline Schema(const Schema&) = delete;
 			virtual ~Schema() override = default;
 		public:
 			inline Schema& operator = (const Schema&) = delete;
+		public:
+			inline void Add(const Reference<Algorithm>& algorithm_);
+		};
+		class Algorithm:
+			public Marker,
+			public Scope,
+			public MarkersContainer
+		{
+		public:
+			using Result = Reference<Schema>; // TODO: change on Link<> ?
+		protected:
+			const Result result;
+		public:
+			inline Algorithm() = delete;
+			inline Algorithm(const Reference<Algorithm>& this_, const Reference<Schema>& result_, const Markers& markers_ = Markers());
+			inline Algorithm(const Algorithm&) = delete;
+			virtual ~Algorithm() override = default;
+		public:
+			inline Algorithm& operator = (const Algorithm&) = delete;
+		public:
+			inline Result GetResult() const;
+		public:
+			inline virtual bool IsEqual(const Reference<Algorithm>& source_) = 0;
+		};
+		class BraceAlgorithm:
+			public Algorithm
+		{
+		public:
+			using BraceType = Lexing2::Group::BraceType;
+			using Argument = Reference<Schema>;
+			using Arguments = Vector<Argument>;
+		protected:
+			const BraceType opening;
+			const BraceType closing;
+			const Arguments arguments;
+		public:
+			inline BraceAlgorithm() = delete;
+			inline BraceAlgorithm(const Reference<BraceAlgorithm>& this_, const BraceType& opening_, const BraceType& closing_, const Arguments& arguments_, const Reference<Schema>& result_, const Markers& markers_ = Markers());
+			inline BraceAlgorithm(const BraceAlgorithm&) = delete;
+			virtual ~BraceAlgorithm() override = default;
+		public:
+			inline BraceAlgorithm& operator = (const BraceAlgorithm&) = delete;
+		public:
+			inline BraceType GetOpening() const;
+			inline BraceType GetClosing() const;
+			inline Arguments GetArguments() const;
+		public:
+			inline virtual bool IsEqual(const Reference<Algorithm>& source_) override;
 		};
 		class Root:
 			public Scope,
@@ -285,6 +340,8 @@ namespace Nu
 			inline Reference<Space> ParseSpace(Data& data_, It& it_, const Reference<Scope>& scope_);
 			inline Reference<Schema> ExtractSchemaDeclaration(Data& data_, It& it_, const Reference<Scope>& scope_);
 			inline Reference<Schema> ParseSchema(Data& data_, It& it_, const Reference<Scope>& scope_);
+			inline Reference<Algorithm> ExtractAlgorithmDeclaration(Data& data_, It& it_, const Reference<Schema>& schema_);
+			inline Reference<Algorithm> ParseAlgorithm(Data& data_, It& it_, const Reference<Schema>& schema_);
 			inline void Preparse(const Reference<Root>& root_);
 			inline void Preparse(const Reference<Space>& space_);
 			inline void Preparse(const Reference<Schema>& schema_);
@@ -494,6 +551,101 @@ inline Nu::Parsing3::Schema::Schema(const Reference<Schema>& this_, const Marker
 	Scope(this_),
 	MarkersContainer(this_, markers_)
 {
+}
+
+inline void Nu::Parsing3::Schema::Add(const Reference<Algorithm>& algorithm_)
+{
+	auto it = std::find_if(algorithms.begin(), algorithms.end(), [&](const Reference<Algorithm>& x)
+	{
+		return x->IsEqual(algorithm_);
+	});
+
+	if (it == algorithms.end())
+	{
+		algorithms.push_back(algorithm_);
+	}
+	else
+	{
+		throw Exception(); // TODO
+	}
+}
+
+#pragma endregion
+
+#pragma region Algorithm
+
+inline Nu::Parsing3::Algorithm::Algorithm(const Reference<Algorithm>& this_, const Reference<Schema>& result_, const Markers& markers_):
+	Marker(this_),
+	Scope(this_),
+	MarkersContainer(this_, markers_),
+	result(result_)
+{
+}
+
+inline Nu::Parsing3::Algorithm::Result Nu::Parsing3::Algorithm::GetResult() const
+{
+	return result;
+}
+
+#pragma endregion
+
+#pragma region BraceAlgorithm
+
+inline Nu::Parsing3::BraceAlgorithm::BraceAlgorithm(const Reference<BraceAlgorithm>& this_, const BraceType& opening_, const BraceType& closing_, const Arguments& arguments_, const Reference<Schema>& result_, const Markers& markers_):
+	Algorithm(Cast<Algorithm>(this_), result_, markers),
+	opening(opening_),
+	closing(closing_),
+	arguments(arguments_)
+{
+}
+
+inline Nu::Parsing3::BraceAlgorithm::BraceType Nu::Parsing3::BraceAlgorithm::GetOpening() const
+{
+	return opening;
+}
+inline Nu::Parsing3::BraceAlgorithm::BraceType Nu::Parsing3::BraceAlgorithm::GetClosing() const
+{
+	return closing;
+}
+inline Nu::Parsing3::BraceAlgorithm::Arguments Nu::Parsing3::BraceAlgorithm::GetArguments() const
+{
+	return arguments;
+}
+
+inline bool Nu::Parsing3::BraceAlgorithm::IsEqual(const Reference<Algorithm>& source_)
+{
+	if (auto braceAlgorithm = UpCast<BraceAlgorithm>(source_))
+	{
+		if (GetOpening() == braceAlgorithm->GetOpening() && GetClosing() == braceAlgorithm->GetClosing())
+		{
+			if (GetResult() == braceAlgorithm->GetResult())
+			{
+				auto isArgumentsEqual = [](const Arguments& x, const Arguments& y)
+				{
+					if (x.size() == y.size())
+					{
+						for (Size i = 0; i < x.size(); ++i)
+						{
+							if (x[i] != y[i])
+							{
+								return false;
+							}
+						}
+
+						return true;
+					}
+					else
+					{
+						return false;
+					}
+				};
+
+				return isArgumentsEqual(GetArguments(), braceAlgorithm->GetArguments());
+			}
+		}
+	}
+
+	return false;
 }
 
 #pragma endregion
@@ -1188,6 +1340,109 @@ inline Nu::Reference<Nu::Parsing3::Schema> Nu::Parsing3::Parser::ParseSchema(Dat
 	return nullptr;
 }
 
+inline Nu::Reference<Nu::Parsing3::Algorithm> Nu::Parsing3::Parser::ExtractAlgorithmDeclaration(Data& data_, It& it_, const Reference<Schema>& schema_)
+{
+	auto o = it_;
+
+	if (auto keyword = ParseKeyword(data_, it_, schema_, Keyword::Value::Algorithm))
+	{
+		auto parseAnySchema = [&]() -> Reference<Schema>
+		{
+			if (auto schema = ParseSchema(data_, it_, schema_))
+			{
+				return schema;
+			}
+			else if (auto name = ParseName(data_, it_, schema_))
+			{
+				auto value = parenthoodManager->GetValue(name);
+
+				if (auto schema = UpCast<Schema>(value)) // TODO: undefined value
+				{
+					return schema;
+				}
+			}
+
+			return nullptr;
+		};
+
+		if (auto resultSchema = parseAnySchema())
+		{
+			if (auto group = ParseToken<Lexing2::Group>(data_, it_))
+			{
+				BraceAlgorithm::Arguments arguments; // TODO: scan arguments
+
+				if (auto semicolon = ParseSpecialToken(data_, it_, Lexing2::Special::Value::Semicolon))
+				{
+					// replace with ReplaceRequire?
+					auto markers = Move(Convert(group->GetTokens()));
+					auto braceAlgorithm = Make<BraceAlgorithm>(group->GetOpening(), group->GetClosing(), arguments, resultSchema, Move(markers));
+					{
+						schema_->Add(braceAlgorithm);
+
+						parenthoodManager->SetParent(braceAlgorithm, schema_);
+					}
+
+					return braceAlgorithm;
+				}
+
+				throw NotImplementedException(); // TODO: full form
+			}
+
+			throw NotImplementedException(); // TODO: other types of algorithms
+		}
+		else
+		{
+			throw Exception(); // TODO
+		}
+
+		/*if (auto group = ParseToken<Lexing2::Group>(data_, it_))
+		{
+			if (group->GetOpening() == Lexing2::Group::BraceType::Figure && group->GetClosing() == Lexing2::Group::BraceType::Figure)
+			{
+				// replace with ReplaceRequire?
+				auto markers = Move(Convert(group->GetTokens()));
+				auto schema = Make<Schema>(Move(markers));
+				{
+					parenthoodManager->SetParent(schema, scope_);
+				}
+
+				return schema;
+			}
+			else
+			{
+				throw Exception();
+			}
+		}*/
+	}
+
+	it_ = o;
+	return nullptr;
+}
+inline Nu::Reference<Nu::Parsing3::Algorithm> Nu::Parsing3::Parser::ParseAlgorithm(Data& data_, It& it_, const Reference<Schema>& schema_)
+{
+	auto o = it_;
+
+	if (auto algorithm = ParseMarker<Algorithm>(data_, it_))
+	{
+		// TODO: Parse(algorithm);
+
+		return algorithm;
+	}
+	else if (auto algorithmDeclaration = ExtractAlgorithmDeclaration(data_, it_, schema_))
+	{
+		MarkersContainer::Markers markers;
+		{
+			markers.push_back(algorithmDeclaration);
+		}
+
+		throw MarkersReplaceRequired(o, it_, markers);
+	}
+
+	it_ = o;
+	return nullptr;
+}
+
+
 inline void Nu::Parsing3::Parser::Preparse(const Reference<Root>& root_)
 {
 	auto &markers = root_->GetMarkers();
@@ -1414,6 +1669,10 @@ inline void Nu::Parsing3::Parser::Parse(const Reference<Schema>& schema_)
 			{
 				// do nothing
 			}
+			else if (auto algorithm = ParseAlgorithm(markers, it, schema_))
+			{
+				// TODO
+			}
 			else
 			{
 				throw Exception();
@@ -1457,12 +1716,20 @@ inline Nu::Parsing3::Parser::Output Nu::Parsing3::Parser::Parse(const Input& inp
 
 		parenthoodManager->SetValue(schemaName, schemaKeyword);
 	}
-	auto makeNameValue = Name::Value("make");
+	auto algorithmNameValue = Name::Value("algorithm");
 	{
-		auto makeName = root->Add(makeNameValue);
-		auto makeKeyword = Make<Keyword>(Keyword::Value::Make);
+		auto algorithmName = root->Add(algorithmNameValue);
+		auto algorithmKeyword = Make<Keyword>(Keyword::Value::Algorithm);
 
-		parenthoodManager->SetValue(makeName, makeKeyword);
+		parenthoodManager->SetValue(algorithmName, algorithmKeyword);
+	}
+
+	auto noneNameValue = Name::Value("none");
+	{
+		auto noneName = root->Add(noneNameValue);
+		auto noneSchema = Make<Schema>();
+
+		parenthoodManager->SetValue(noneName, noneSchema);
 	}
 
 	auto mainNameValue = Name::Value(".main");
