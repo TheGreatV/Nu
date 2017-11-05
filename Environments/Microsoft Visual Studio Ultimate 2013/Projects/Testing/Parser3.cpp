@@ -1823,26 +1823,97 @@ namespace Testing
 				}
 
 				auto output = parser->Parse(input);
-				auto &names = output->GetNames();
+				auto &markers = output->GetMarkers();
 
-				// auto nameIt = names.find("c");
-				// auto levels = (*nameIt).second;
-				// auto levelsIt = levels.find(0);
-				// auto name = (*levelsIt).second;
-				// auto value = parser->parenthoodManager->GetValue(name);
-				// auto keyword = UpCast<Parsing3::Keyword>(value);
-				// 
-				// Assert::IsTrue(
-				// 	keyword != nullptr,
-				// 	L"Verify that value is keyword"
-				// );
+				auto schema = UpCast<Parsing3::Schema>(*markers.begin());
+				auto &algorithms = schema->GetAlgorithms();
+
+				Assert::IsTrue(
+					algorithms.size() == 1,
+					L"Verify that there is exactly 1 algorithm"
+				);
+
+				auto algorithm = algorithms[0];
+				auto braceAlgorithm = UpCast<Parsing3::BraceAlgorithm>(algorithm);
+
+				Assert::IsTrue(
+					braceAlgorithm != nullptr,
+					L"Verify that algorithm is Brace Algorithm"
+				);
+
+				Assert::IsTrue(
+					braceAlgorithm->GetOpening() == Parsing3::BraceAlgorithm::BraceType::Round,
+					L"Verify that algorithm opening is Round"
+				);
+				Assert::IsTrue(
+					braceAlgorithm->GetClosing() == Parsing3::BraceAlgorithm::BraceType::Round,
+					L"Verify that algorithm closing is Round"
+				);
+
+				Assert::IsTrue(
+					braceAlgorithm->GetArguments().empty(),
+					L"Verify that algorithm arguments is empty"
+				);
+			}
+			TEST_METHOD(Parser_Parse_AlgorithmDeclarationWithSelfResult)
+			{
+				auto parser = Make<Parser>();
+
+				auto input = Make<Lexing2::Container>();
+				{
+					Lexing2::Container::Tokens nested;
+					{
+						nested.push_back(Make<Lexing2::Text>("algorithm"));
+						nested.push_back(Make<Lexing2::Text>("X"));
+						nested.push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Round, Lexing2::Group::BraceType::Round));
+						nested.push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Semicolon));
+					}
+
+					input->GetTokens().push_back(Make<Lexing2::Text>("X"));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+					input->GetTokens().push_back(Make<Lexing2::Text>("schema"));
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure, nested));
+				}
+
+				auto output = parser->Parse(input);
+				auto &markers = output->GetMarkers();
+
+				/*auto schema = UpCast<Parsing3::Schema>(*markers.begin());
+				auto &algorithms = schema->GetAlgorithms();
+
+				Assert::IsTrue(
+					algorithms.size() == 1,
+					L"Verify that there is exactly 1 algorithm"
+				);
+
+				auto algorithm = algorithms[0];
+				auto braceAlgorithm = UpCast<Parsing3::BraceAlgorithm>(algorithm);
+
+				Assert::IsTrue(
+					braceAlgorithm != nullptr,
+					L"Verify that algorithm is Brace Algorithm"
+				);
+
+				Assert::IsTrue(
+					braceAlgorithm->GetOpening() == Parsing3::BraceAlgorithm::BraceType::Round,
+					L"Verify that algorithm opening is Round"
+				);
+				Assert::IsTrue(
+					braceAlgorithm->GetClosing() == Parsing3::BraceAlgorithm::BraceType::Round,
+					L"Verify that algorithm closing is Round"
+				);
+
+				Assert::IsTrue(
+					braceAlgorithm->GetArguments().empty(),
+					L"Verify that algorithm arguments is empty"
+				);*/
 			}
 		};
 
 		TEST_CLASS(Regression)
 		{
 		public:
-			TEST_METHOD(Bug01_ParsingOfContentOfUnnamedSpace)
+			TEST_METHOD(Bug01_ParsingContentOfUnnamedSpace)
 			{
 				auto parser = Make<Parser>();
 
@@ -1872,6 +1943,32 @@ namespace Testing
 				
 				Assert::IsTrue(
 					b != nullptr,
+					L"Verify that value is not empty"
+				);
+			}
+			TEST_METHOD(Bug02_MakingSpaceUsingForwardDeclarationKeyword)
+			{
+				auto parser = Make<Parser>();
+
+				auto input = Make<Lexing2::Container>();
+				{
+					input->GetTokens().push_back(Make<Lexing2::Text>("x"));
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Semicolon));
+
+					input->GetTokens().push_back(Make<Lexing2::Text>("x"));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+					input->GetTokens().push_back(Make<Lexing2::Text>("space"));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Semicolon));
+				}
+
+				auto output = parser->Parse(input);
+				auto &markers = output->GetMarkers();
+				
+				auto space = UpCast<Parsing3::Space>(*markers.begin());
+
+				Assert::IsTrue(
+					space != nullptr,
 					L"Verify that value is not empty"
 				);
 			}

@@ -219,6 +219,7 @@ namespace Nu
 		public:
 			inline Schema& operator = (const Schema&) = delete;
 		public:
+			inline Algorithms GetAlgorithms() const;
 			inline void Add(const Reference<Algorithm>& algorithm_);
 		};
 		class Algorithm:
@@ -330,9 +331,12 @@ namespace Nu
 		public:
 			inline Parser& operator = (const Parser&) = delete;
 		protected:
+			inline void SkipUntilDeclaration(Data& data_, It& it_, const It& o_);
+		protected:
 			inline Reference<Markers::Delimiter> ExtractDelimiter(Data& data_, It& it_);
 			inline Reference<Markers::Delimiter> ParseDelimiter(Data& data_, It& it_);
 			inline Reference<Name> ParseName(Data& data_, It& it_, const Reference<Scope>& scope_);
+			inline Reference<Unit> ParseNameUnit(Data& data_, It& it_, const Reference<Scope>& scope_);
 			inline Reference<Keyword> ParseKeyword(Data& data_, It& it_, const Reference<Scope>& scope_, const Keyword::Value& value_ = Keyword::Value::None);
 			inline Reference<Markers::DeclarationHeader> ExtractDeclarationHeader(Data& data_, It& it_, const Reference<Scope>& scope_);
 			inline Reference<Markers::Declaration> ParseDeclaration(Data& data_, It& it_, const Reference<Scope>& scope_);
@@ -553,6 +557,10 @@ inline Nu::Parsing3::Schema::Schema(const Reference<Schema>& this_, const Marker
 {
 }
 
+inline Nu::Parsing3::Schema::Algorithms Nu::Parsing3::Schema::GetAlgorithms() const
+{
+	return algorithms;
+}
 inline void Nu::Parsing3::Schema::Add(const Reference<Algorithm>& algorithm_)
 {
 	auto it = std::find_if(algorithms.begin(), algorithms.end(), [&](const Reference<Algorithm>& x)
@@ -1035,6 +1043,18 @@ inline Nu::Parsing3::Parser::Parser(const Reference<Parser>& this_):
 {
 }
 
+inline void Nu::Parsing3::Parser::SkipUntilDeclaration(Data& data_, It& it_, const It& o_)
+{
+	auto it = it_;
+
+	while (it != data_.end() && !UpCast<Markers::DeclarationHeader>(*it))
+	{
+		++it;
+	}
+
+	throw MarkersSkipRequired(o_, it);
+}
+
 inline Nu::Reference<Nu::Parsing3::Markers::Delimiter> Nu::Parsing3::Parser::ExtractDelimiter(Data& data_, It& it_)
 {
 	auto o = it_;
@@ -1096,15 +1116,34 @@ inline Nu::Reference<Nu::Parsing3::Name> Nu::Parsing3::Parser::ParseName(Data& d
 	it_ = o;
 	return nullptr;
 }
-inline Nu::Reference<Nu::Parsing3::Keyword> Nu::Parsing3::Parser::ParseKeyword(Data& data_, It& it_, const Reference<Scope>& scope_, const Keyword::Value& value_)
+inline Nu::Reference<Nu::Parsing3::Unit> Nu::Parsing3::Parser::ParseNameUnit(Data& data_, It& it_, const Reference<Scope>& scope_)
 {
 	auto o = it_;
-
+	
 	if (auto name = ParseName(data_, it_, scope_))
 	{
 		auto value = parenthoodManager->GetValue(name);
 
-		if (auto keyword = UpCast<Keyword>(value))
+		if (value)
+		{
+			return value;
+		}
+		else
+		{
+			SkipUntilDeclaration(data_, it_, o);
+		}
+	}
+
+	it_ = o;
+	return nullptr;
+}
+inline Nu::Reference<Nu::Parsing3::Keyword> Nu::Parsing3::Parser::ParseKeyword(Data& data_, It& it_, const Reference<Scope>& scope_, const Keyword::Value& value_)
+{
+	auto o = it_;
+
+	if (auto unit = ParseNameUnit(data_, it_, scope_))
+	{
+		if (auto keyword = UpCast<Keyword>(unit))
 		{
 			if (value_ == Keyword::Value::None || keyword->GetValue() == value_)
 			{
@@ -1198,35 +1237,18 @@ inline Nu::Reference<Nu::Parsing3::Markers::Declaration> Nu::Parsing3::Parser::P
 
 			throw MarkersReplaceRequired(o, it_, markers);
 		}
-		else if (auto name = ParseName(data_, it_, scope_))
+		else if (auto unit = ParseNameUnit(data_, it_, scope_))
 		{
-			auto value = parenthoodManager->GetValue(name);
+			auto declaration = Make<Markers::Declaration>(declarationName, unit);
 
-			if (value)
+			parenthoodManager->SetValue(declarationName, unit);
+
+			MarkersContainer::Markers markers;
 			{
-				auto declaration = Make<Markers::Declaration>(declarationName, value);
-
-				parenthoodManager->SetValue(declarationName, value);
-
-				MarkersContainer::Markers markers;
-				{
-					markers.push_back(declaration);
-				}
-
-				throw MarkersReplaceRequired(o, it_, markers);
+				markers.push_back(declaration);
 			}
-			else
-			{
-				// isMarkerSkipped
-				auto it = it_;
 
-				while (it != data_.end() && !UpCast<Markers::DeclarationHeader>(*it))
-				{
-					++it;
-				}
-
-				throw MarkersSkipRequired(o, it);
-			}
+			throw MarkersReplaceRequired(o, it_, markers);
 		}
 	}
 
@@ -1352,11 +1374,9 @@ inline Nu::Reference<Nu::Parsing3::Algorithm> Nu::Parsing3::Parser::ExtractAlgor
 			{
 				return schema;
 			}
-			else if (auto name = ParseName(data_, it_, schema_))
+			else if (auto unit = ParseNameUnit(data_, it_, schema_))
 			{
-				auto value = parenthoodManager->GetValue(name);
-
-				if (auto schema = UpCast<Schema>(value)) // TODO: undefined value
+				if (auto schema = UpCast<Schema>(unit))
 				{
 					return schema;
 				}
@@ -1394,25 +1414,6 @@ inline Nu::Reference<Nu::Parsing3::Algorithm> Nu::Parsing3::Parser::ExtractAlgor
 		{
 			throw Exception(); // TODO
 		}
-
-		/*if (auto group = ParseToken<Lexing2::Group>(data_, it_))
-		{
-			if (group->GetOpening() == Lexing2::Group::BraceType::Figure && group->GetClosing() == Lexing2::Group::BraceType::Figure)
-			{
-				// replace with ReplaceRequire?
-				auto markers = Move(Convert(group->GetTokens()));
-				auto schema = Make<Schema>(Move(markers));
-				{
-					parenthoodManager->SetParent(schema, scope_);
-				}
-
-				return schema;
-			}
-			else
-			{
-				throw Exception();
-			}
-		}*/
 	}
 
 	it_ = o;
