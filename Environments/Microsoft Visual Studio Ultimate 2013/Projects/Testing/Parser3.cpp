@@ -1804,7 +1804,7 @@ namespace Testing
 				);
 			}
 
-			TEST_METHOD(Parser_Parse_AlgorithmDeclaration)
+			TEST_METHOD(Parser_Parse_UnnamedSchema_AlgorithmDeclarationWithoutResult)
 			{
 				auto parser = Make<Parser>();
 
@@ -1834,6 +1834,12 @@ namespace Testing
 				);
 
 				auto algorithm = algorithms[0];
+
+				Assert::IsTrue(
+					algorithm->GetResult() == parser->globalNoneSchema,
+					L"Verify that algorithm arguments is empty"
+				);
+
 				auto braceAlgorithm = UpCast<Parsing3::BraceAlgorithm>(algorithm);
 
 				Assert::IsTrue(
@@ -1855,7 +1861,267 @@ namespace Testing
 					L"Verify that algorithm arguments is empty"
 				);
 			}
-			TEST_METHOD(Parser_Parse_AlgorithmDeclarationWithSelfResult)
+			TEST_METHOD(Parser_Parse_UnnamedSchema_AlgorithmDeclarationWithResult)
+			{
+				auto parser = Make<Parser>();
+
+				auto input = Make<Lexing2::Container>();
+				{
+					input->GetTokens().push_back(Make<Lexing2::Text>("A"));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+					input->GetTokens().push_back(Make<Lexing2::Text>("schema"));
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Semicolon));
+
+					Lexing2::Container::Tokens nested;
+					{
+						nested.push_back(Make<Lexing2::Text>("algorithm"));
+						nested.push_back(Make<Lexing2::Text>("A"));
+						nested.push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Round, Lexing2::Group::BraceType::Round));
+						nested.push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Semicolon));
+					}
+
+					input->GetTokens().push_back(Make<Lexing2::Text>("schema"));
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure, nested));
+				}
+
+				auto output = parser->Parse(input);
+				auto &markers = output->GetMarkers();
+				auto &names = output->GetNames();
+
+				auto schema = UpCast<Parsing3::Schema>(*markers.rbegin());
+				auto &algorithms = schema->GetAlgorithms();
+
+				Assert::IsTrue(
+					algorithms.size() == 1,
+					L"Verify that there is exactly 1 algorithm"
+				);
+
+				auto algorithm = algorithms[0];
+
+				auto resultSchema = UpCast<Parsing3::Schema>(parser->parenthoodManager->GetValue(names["A"][0]));
+
+				Assert::IsTrue(
+					algorithm->GetResult() == resultSchema,
+					L"Verify that algorithm result is as expected"
+				);
+
+				auto braceAlgorithm = UpCast<Parsing3::BraceAlgorithm>(algorithm);
+
+				Assert::IsTrue(
+					braceAlgorithm != nullptr,
+					L"Verify that algorithm is Brace Algorithm"
+				);
+
+				Assert::IsTrue(
+					braceAlgorithm->GetOpening() == Parsing3::BraceAlgorithm::BraceType::Round,
+					L"Verify that algorithm opening is Round"
+				);
+				Assert::IsTrue(
+					braceAlgorithm->GetClosing() == Parsing3::BraceAlgorithm::BraceType::Round,
+					L"Verify that algorithm closing is Round"
+				);
+
+				Assert::IsTrue(
+					braceAlgorithm->GetArguments().empty(),
+					L"Verify that algorithm arguments is empty"
+				);
+			}
+			TEST_METHOD(Parser_Parse_UnnamedSchema_AlgorithmDeclarationWithForwardDeclarationResult)
+			{
+				auto parser = Make<Parser>();
+
+				auto input = Make<Lexing2::Container>();
+				{
+					Lexing2::Container::Tokens nested;
+					{
+						nested.push_back(Make<Lexing2::Text>("algorithm"));
+						nested.push_back(Make<Lexing2::Text>("A"));
+						nested.push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Round, Lexing2::Group::BraceType::Round));
+						nested.push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Semicolon));
+					}
+
+					input->GetTokens().push_back(Make<Lexing2::Text>("schema"));
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure, nested));
+					
+					input->GetTokens().push_back(Make<Lexing2::Text>("A"));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+					input->GetTokens().push_back(Make<Lexing2::Text>("schema"));
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Semicolon));
+				}
+
+				auto output = parser->Parse(input);
+				auto &markers = output->GetMarkers();
+				auto &names = output->GetNames();
+
+				auto schema = UpCast<Parsing3::Schema>(*markers.begin());
+				auto &algorithms = schema->GetAlgorithms();
+
+				Assert::IsTrue(
+					algorithms.size() == 1,
+					L"Verify that there is exactly 1 algorithm"
+				);
+
+				auto algorithm = algorithms[0];
+
+				auto resultSchema = UpCast<Parsing3::Schema>(parser->parenthoodManager->GetValue(names["A"][0]));
+
+				Assert::IsTrue(
+					algorithm->GetResult() == resultSchema,
+					L"Verify that algorithm result is as expected"
+				);
+
+				auto braceAlgorithm = UpCast<Parsing3::BraceAlgorithm>(algorithm);
+
+				Assert::IsTrue(
+					braceAlgorithm != nullptr,
+					L"Verify that algorithm is Brace Algorithm"
+				);
+
+				Assert::IsTrue(
+					braceAlgorithm->GetOpening() == Parsing3::BraceAlgorithm::BraceType::Round,
+					L"Verify that algorithm opening is Round"
+				);
+				Assert::IsTrue(
+					braceAlgorithm->GetClosing() == Parsing3::BraceAlgorithm::BraceType::Round,
+					L"Verify that algorithm closing is Round"
+				);
+
+				Assert::IsTrue(
+					braceAlgorithm->GetArguments().empty(),
+					L"Verify that algorithm arguments is empty"
+				);
+			}
+			TEST_METHOD(Parser_Parse_NamedSchema_AlgorithmDeclarationWithoutResult)
+			{
+				auto parser = Make<Parser>();
+
+				auto input = Make<Lexing2::Container>();
+				{
+					Lexing2::Container::Tokens nested;
+					{
+						nested.push_back(Make<Lexing2::Text>("algorithm"));
+						nested.push_back(Make<Lexing2::Text>("none"));
+						nested.push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Round, Lexing2::Group::BraceType::Round));
+						nested.push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Semicolon));
+					}
+
+					input->GetTokens().push_back(Make<Lexing2::Text>("X"));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+					input->GetTokens().push_back(Make<Lexing2::Text>("schema"));
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure, nested));
+				}
+
+				auto output = parser->Parse(input);
+				auto &markers = output->GetMarkers();
+				auto &names = output->GetNames();
+
+				auto schema = UpCast<Parsing3::Schema>(parser->parenthoodManager->GetValue(names["X"][0]));
+				auto &algorithms = schema->GetAlgorithms();
+
+				Assert::IsTrue(
+					algorithms.size() == 1,
+					L"Verify that there is exactly 1 algorithm"
+				);
+
+				auto algorithm = algorithms[0];
+
+				Assert::IsTrue(
+					algorithm->GetResult() == parser->globalNoneSchema,
+					L"Verify that algorithm arguments is empty"
+				);
+
+				auto braceAlgorithm = UpCast<Parsing3::BraceAlgorithm>(algorithm);
+
+				Assert::IsTrue(
+					braceAlgorithm != nullptr,
+					L"Verify that algorithm is Brace Algorithm"
+				);
+
+				Assert::IsTrue(
+					braceAlgorithm->GetOpening() == Parsing3::BraceAlgorithm::BraceType::Round,
+					L"Verify that algorithm opening is Round"
+				);
+				Assert::IsTrue(
+					braceAlgorithm->GetClosing() == Parsing3::BraceAlgorithm::BraceType::Round,
+					L"Verify that algorithm closing is Round"
+				);
+
+				Assert::IsTrue(
+					braceAlgorithm->GetArguments().empty(),
+					L"Verify that algorithm arguments is empty"
+				);
+			}
+			TEST_METHOD(Parser_Parse_NamedSchema_AlgorithmDeclarationWithResult)
+			{
+				auto parser = Make<Parser>();
+
+				auto input = Make<Lexing2::Container>();
+				{
+					input->GetTokens().push_back(Make<Lexing2::Text>("A"));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+					input->GetTokens().push_back(Make<Lexing2::Text>("schema"));
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Semicolon));
+
+					Lexing2::Container::Tokens nested;
+					{
+						nested.push_back(Make<Lexing2::Text>("algorithm"));
+						nested.push_back(Make<Lexing2::Text>("A"));
+						nested.push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Round, Lexing2::Group::BraceType::Round));
+						nested.push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Semicolon));
+					}
+
+					input->GetTokens().push_back(Make<Lexing2::Text>("X"));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+					input->GetTokens().push_back(Make<Lexing2::Text>("schema"));
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure, nested));
+				}
+
+				auto output = parser->Parse(input);
+				auto &markers = output->GetMarkers();
+				auto &names = output->GetNames();
+
+				auto schema = UpCast<Parsing3::Schema>(parser->parenthoodManager->GetValue(names["X"][0]));
+				auto &algorithms = schema->GetAlgorithms();
+
+				Assert::IsTrue(
+					algorithms.size() == 1,
+					L"Verify that there is exactly 1 algorithm"
+				);
+
+				auto algorithm = algorithms[0];
+
+				auto resultSchema = UpCast<Parsing3::Schema>(parser->parenthoodManager->GetValue(names["A"][0]));
+
+				Assert::IsTrue(
+					algorithm->GetResult() == resultSchema,
+					L"Verify that algorithm result is as expected"
+				);
+
+				auto braceAlgorithm = UpCast<Parsing3::BraceAlgorithm>(algorithm);
+
+				Assert::IsTrue(
+					braceAlgorithm != nullptr,
+					L"Verify that algorithm is Brace Algorithm"
+				);
+
+				Assert::IsTrue(
+					braceAlgorithm->GetOpening() == Parsing3::BraceAlgorithm::BraceType::Round,
+					L"Verify that algorithm opening is Round"
+				);
+				Assert::IsTrue(
+					braceAlgorithm->GetClosing() == Parsing3::BraceAlgorithm::BraceType::Round,
+					L"Verify that algorithm closing is Round"
+				);
+
+				Assert::IsTrue(
+					braceAlgorithm->GetArguments().empty(),
+					L"Verify that algorithm arguments is empty"
+				);
+			}
+			TEST_METHOD(Parser_Parse_NamedSchema_AlgorithmDeclarationWithSelfResult)
 			{
 				auto parser = Make<Parser>();
 
@@ -1877,8 +2143,9 @@ namespace Testing
 
 				auto output = parser->Parse(input);
 				auto &markers = output->GetMarkers();
+				auto &names = output->GetNames();
 
-				/*auto schema = UpCast<Parsing3::Schema>(*markers.begin());
+				auto schema = UpCast<Parsing3::Schema>(parser->parenthoodManager->GetValue(names["X"][0]));
 				auto &algorithms = schema->GetAlgorithms();
 
 				Assert::IsTrue(
@@ -1887,6 +2154,12 @@ namespace Testing
 				);
 
 				auto algorithm = algorithms[0];
+
+				Assert::IsTrue(
+					algorithm->GetResult() == schema,
+					L"Verify that algorithm result is same as schema"
+				);
+
 				auto braceAlgorithm = UpCast<Parsing3::BraceAlgorithm>(algorithm);
 
 				Assert::IsTrue(
@@ -1906,7 +2179,75 @@ namespace Testing
 				Assert::IsTrue(
 					braceAlgorithm->GetArguments().empty(),
 					L"Verify that algorithm arguments is empty"
-				);*/
+				);
+			}
+			TEST_METHOD(Parser_Parse_NamedSchema_AlgorithmDeclarationWithForwardDeclarationResult)
+			{
+				auto parser = Make<Parser>();
+
+				auto input = Make<Lexing2::Container>();
+				{
+					Lexing2::Container::Tokens nested;
+					{
+						nested.push_back(Make<Lexing2::Text>("algorithm"));
+						nested.push_back(Make<Lexing2::Text>("A"));
+						nested.push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Round, Lexing2::Group::BraceType::Round));
+						nested.push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Semicolon));
+					}
+
+					input->GetTokens().push_back(Make<Lexing2::Text>("X"));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+					input->GetTokens().push_back(Make<Lexing2::Text>("schema"));
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure, nested));
+					
+					input->GetTokens().push_back(Make<Lexing2::Text>("A"));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+					input->GetTokens().push_back(Make<Lexing2::Text>("schema"));
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Semicolon));
+				}
+
+				auto output = parser->Parse(input);
+				auto &markers = output->GetMarkers();
+				auto &names = output->GetNames();
+
+				auto schema = UpCast<Parsing3::Schema>(parser->parenthoodManager->GetValue(names["X"][0]));
+				auto &algorithms = schema->GetAlgorithms();
+
+				Assert::IsTrue(
+					algorithms.size() == 1,
+					L"Verify that there is exactly 1 algorithm"
+				);
+
+				auto algorithm = algorithms[0];
+
+				auto resultSchema = UpCast<Parsing3::Schema>(parser->parenthoodManager->GetValue(names["A"][0]));
+
+				Assert::IsTrue(
+					algorithm->GetResult() == resultSchema,
+					L"Verify that algorithm result is as expected"
+				);
+
+				auto braceAlgorithm = UpCast<Parsing3::BraceAlgorithm>(algorithm);
+
+				Assert::IsTrue(
+					braceAlgorithm != nullptr,
+					L"Verify that algorithm is Brace Algorithm"
+				);
+
+				Assert::IsTrue(
+					braceAlgorithm->GetOpening() == Parsing3::BraceAlgorithm::BraceType::Round,
+					L"Verify that algorithm opening is Round"
+				);
+				Assert::IsTrue(
+					braceAlgorithm->GetClosing() == Parsing3::BraceAlgorithm::BraceType::Round,
+					L"Verify that algorithm closing is Round"
+				);
+
+				Assert::IsTrue(
+					braceAlgorithm->GetArguments().empty(),
+					L"Verify that algorithm arguments is empty"
+				);
 			}
 		};
 

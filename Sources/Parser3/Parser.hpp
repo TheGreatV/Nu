@@ -321,6 +321,8 @@ namespace Nu
 			inline static Reference<Name> ExtractName(Data& data_, It& it_, const Reference<Scope>& scope_, const Reference<ParenthoodManager>& parenthoodManager_);
 		protected:
 			bool isMarkerSkipped;
+		public: // TODO: make private
+			Reference<Schema> globalNoneSchema;
 		public:
 			const Reference<ParenthoodManager> parenthoodManager = Make<ParenthoodManager>();
 		public:
@@ -1041,6 +1043,7 @@ inline Nu::Reference<Nu::Parsing3::Name> Nu::Parsing3::Parser::ExtractName(Data&
 inline Nu::Parsing3::Parser::Parser(const Reference<Parser>& this_):
 	Entity(this_)
 {
+	globalNoneSchema = Make<Schema>();
 }
 
 inline void Nu::Parsing3::Parser::SkipUntilDeclaration(Data& data_, It& it_, const It& o_)
@@ -1190,6 +1193,10 @@ inline Nu::Reference<Nu::Parsing3::Markers::Declaration> Nu::Parsing3::Parser::P
 		if (auto space = UpCast<Space>(unit))
 		{
 			Parse(space);
+		}
+		else if (auto schema = UpCast<Schema>(unit))
+		{
+			Parse(schema);
 		}
 
 		return declaration;
@@ -1728,9 +1735,8 @@ inline Nu::Parsing3::Parser::Output Nu::Parsing3::Parser::Parse(const Input& inp
 	auto noneNameValue = Name::Value("none");
 	{
 		auto noneName = root->Add(noneNameValue);
-		auto noneSchema = Make<Schema>();
 
-		parenthoodManager->SetValue(noneName, noneSchema);
+		parenthoodManager->SetValue(noneName, globalNoneSchema);
 	}
 
 	auto mainNameValue = Name::Value(".main");
