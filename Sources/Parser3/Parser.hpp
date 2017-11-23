@@ -30,6 +30,9 @@ namespace Nu
 		class Schema;
 		class Algorithm;
 		class BraceAlgorithm;
+		class Body;
+		class Command;
+		class Instance;
 		class ParenthoodManager;
 		class Parser;
 
@@ -44,67 +47,64 @@ namespace Nu
 		public:
 			inline Marker& operator = (const Marker&) = delete;
 		};
-		namespace Markers
+		class Token:
+			public Marker
 		{
-			class Token:
-				public Marker
-			{
-			public:
-				using Value = Reference<Lexing2::Token>;
-			protected:
-				const Value value;
-			public:
-				inline Token() = delete;
-				inline Token(const Reference<Token>& this_, const Value& value_);
-				inline Token(const Token&) = delete;
-				virtual ~Token() override = default;
-			public:
-				inline Token& operator = (const Token&) = delete;
-			public:
-				inline Value GetValue() const;
-			};
-			class DeclarationHeader:
-				public Marker
-			{
-			protected:
-				const Reference<Name> name;
-			public:
-				inline DeclarationHeader() = delete;
-				inline DeclarationHeader(const Reference<DeclarationHeader>& this_, const Reference<Name>& name_);
-				inline DeclarationHeader(const DeclarationHeader&) = delete;
-				virtual ~DeclarationHeader() override = default;
-			public:
-				inline DeclarationHeader& operator = (const DeclarationHeader&) = delete;
-			public:
-				inline Reference<Name> GetName() const;
-			};
-			class Declaration:
-				public DeclarationHeader
-			{
-			protected:
-				const Reference<Unit> unit;
-			public:
-				inline Declaration() = delete;
-				inline Declaration(const Reference<Declaration>& this_, const Reference<Name>& name_, const Reference<Unit>& unit_);
-				inline Declaration(const Declaration&) = delete;
-				virtual ~Declaration() override = default;
-			public:
-				inline Declaration& operator = (const Declaration&) = delete;
-			public:
-				inline Reference<Unit> GetUnit() const;
-			};
-			class Delimiter:
-				public Marker
-			{
-			public:
-				inline Delimiter() = delete;
-				inline Delimiter(const Reference<Delimiter>& this_);
-				inline Delimiter(const Delimiter&) = delete;
-				virtual ~Delimiter() override = default;
-			public:
-				inline Delimiter& operator = (const Delimiter&) = delete;
-			};
-		}
+		public:
+			using Value = Reference<Lexing2::Token>;
+		protected:
+			const Value value;
+		public:
+			inline Token() = delete;
+			inline Token(const Reference<Token>& this_, const Value& value_);
+			inline Token(const Token&) = delete;
+			virtual ~Token() override = default;
+		public:
+			inline Token& operator = (const Token&) = delete;
+		public:
+			inline Value GetValue() const;
+		};
+		class DeclarationHeader:
+			public Marker
+		{
+		protected:
+			const Reference<Name> name;
+		public:
+			inline DeclarationHeader() = delete;
+			inline DeclarationHeader(const Reference<DeclarationHeader>& this_, const Reference<Name>& name_);
+			inline DeclarationHeader(const DeclarationHeader&) = delete;
+			virtual ~DeclarationHeader() override = default;
+		public:
+			inline DeclarationHeader& operator = (const DeclarationHeader&) = delete;
+		public:
+			inline Reference<Name> GetName() const;
+		};
+		class Declaration:
+			public DeclarationHeader
+		{
+		protected:
+			const Reference<Unit> unit;
+		public:
+			inline Declaration() = delete;
+			inline Declaration(const Reference<Declaration>& this_, const Reference<Name>& name_, const Reference<Unit>& unit_);
+			inline Declaration(const Declaration&) = delete;
+			virtual ~Declaration() override = default;
+		public:
+			inline Declaration& operator = (const Declaration&) = delete;
+		public:
+			inline Reference<Unit> GetUnit() const;
+		};
+		class Delimiter:
+			public Marker
+		{
+		public:
+			inline Delimiter() = delete;
+			inline Delimiter(const Reference<Delimiter>& this_);
+			inline Delimiter(const Delimiter&) = delete;
+			virtual ~Delimiter() override = default;
+		public:
+			inline Delimiter& operator = (const Delimiter&) = delete;
+		};
 		class MarkersContainer:
 			public Entity
 		{
@@ -157,6 +157,7 @@ namespace Nu
 				Space,
 				Schema,
 				Algorithm,
+				Body,
 				Make,
 			};
 		protected:
@@ -268,6 +269,44 @@ namespace Nu
 		public:
 			inline virtual bool IsEqual(const Reference<Algorithm>& source_) override;
 		};
+		class Body:
+			public Marker,
+			public Scope,
+			public MarkersContainer
+		{
+		public:
+			inline Body() = delete;
+			inline Body(const Reference<Body>& this_, const Markers& markers_ = Markers());
+			inline Body(const Body&) = delete;
+			virtual ~Body() override = default;
+		public:
+			inline Body& operator = (const Body&) = delete;
+		};
+		class Command:
+			public Marker
+		{
+		public:
+			inline Command() = delete;
+			inline Command(const Reference<Command>& this_);
+			inline Command(const Command&) = delete;
+			virtual ~Command() override = default;
+		public:
+			inline Command& operator = (const Command&) = delete;
+		};
+		class Instance:
+			public Marker,
+			public Unit
+		{
+		protected:
+			const Reference<Schema> schema;
+		public:
+			inline Instance() = delete;
+			inline Instance(const Reference<Instance>& this_, const Reference<Schema>& schema_);
+			inline Instance(const Instance&) = delete;
+			virtual ~Instance() override = default;
+		public:
+			inline Instance& operator = (const Instance&) = delete;
+		};
 		class Root:
 			public Scope,
 			public MarkersContainer
@@ -286,6 +325,7 @@ namespace Nu
 		protected:
 			Map<Reference<Unit>, Reference<Scope>> parenthoodLookup;
 			Map<Reference<Name>, Reference<Unit>> valueLookup;
+			Map<Reference<Algorithm>, Reference<Body>> bodiesLookup;
 		public:
 			inline ParenthoodManager() = delete;
 			inline ParenthoodManager(const Reference<ParenthoodManager>& this_);
@@ -299,6 +339,8 @@ namespace Nu
 			inline Scope::Names GetNames(const Reference<Scope>& scope_);
 			inline Reference<Unit> GetValue(const Reference<Name>& name_) const;
 			inline void SetValue(const Reference<Name>& name_, const Reference<Unit>& unit_);
+			inline Reference<Body> GetBody(const Reference<Algorithm>& algorithm_);
+			inline void SetBody(const Reference<Body>& body_, const Reference<Algorithm>& algorithm_);
 		};
 		class Parser:
 			public Entity
@@ -313,7 +355,7 @@ namespace Nu
 			class MarkersReplaceRequired;
 			class MarkersSkipRequired;
 		public:
-			inline static Reference<Markers::Token> Convert(const Reference<Lexing2::Token>& value_);
+			inline static Reference<Token> Convert(const Reference<Lexing2::Token>& value_);
 			inline static MarkersContainer::Markers Convert(const Lexing2::Container::Tokens& source_);
 			template<class T> inline static Reference<T> ParseMarker(Data& data_, It& it_);
 			template<class T> inline static Reference<T> ParseToken(Data& data_, It& it_);
@@ -321,8 +363,13 @@ namespace Nu
 			inline static Reference<Name> ExtractName(Data& data_, It& it_, const Reference<Scope>& scope_, const Reference<ParenthoodManager>& parenthoodManager_);
 		protected:
 			bool isMarkerSkipped;
+			// Map<Reference<Scope>, Reference<Stack<Reference<Declaration>>>> allPendingDeclarations;
 		public: // TODO: make private
 			Reference<Schema> globalNoneSchema;
+			Reference<Keyword> globalKeywordSpace;
+			Reference<Keyword> globalKeywordSchema;
+			Reference<Keyword> globalKeywordAlgorithm;
+			Reference<Keyword> globalKeywordBody;
 		public:
 			const Reference<ParenthoodManager> parenthoodManager = Make<ParenthoodManager>();
 		public:
@@ -335,25 +382,40 @@ namespace Nu
 		protected:
 			inline void SkipUntilDeclaration(Data& data_, It& it_, const It& o_);
 		protected:
-			inline Reference<Markers::Delimiter> ExtractDelimiter(Data& data_, It& it_);
-			inline Reference<Markers::Delimiter> ParseDelimiter(Data& data_, It& it_);
+			inline Reference<Delimiter> ExtractDelimiter(Data& data_, It& it_);
+			inline Reference<Delimiter> ParseDelimiter(Data& data_, It& it_);
 			inline Reference<Name> ParseName(Data& data_, It& it_, const Reference<Scope>& scope_);
 			inline Reference<Unit> ParseNameUnit(Data& data_, It& it_, const Reference<Scope>& scope_);
 			inline Reference<Keyword> ParseKeyword(Data& data_, It& it_, const Reference<Scope>& scope_, const Keyword::Value& value_ = Keyword::Value::None);
-			inline Reference<Markers::DeclarationHeader> ExtractDeclarationHeader(Data& data_, It& it_, const Reference<Scope>& scope_);
-			inline Reference<Markers::Declaration> ParseDeclaration(Data& data_, It& it_, const Reference<Scope>& scope_);
+			// Declaration
+			inline Reference<DeclarationHeader> ExtractDeclarationHeader(Data& data_, It& it_, const Reference<Scope>& scope_);
+			inline Reference<Declaration> ParseDeclaration(Data& data_, It& it_, const Reference<Scope>& scope_);
+			// Space
 			inline Reference<Space> ExtractSpaceDeclaration(Data& data_, It& it_, const Reference<Scope>& scope_);
 			inline Reference<Space> ParseSpace(Data& data_, It& it_, const Reference<Scope>& scope_);
+			// Schema
 			inline Reference<Schema> ExtractSchemaDeclaration(Data& data_, It& it_, const Reference<Scope>& scope_);
 			inline Reference<Schema> ParseSchema(Data& data_, It& it_, const Reference<Scope>& scope_);
+			inline Reference<Schema> ParseAnySchema(Data& data_, It& it_, const Reference<Scope>& scope_);
+			// Algorithm
 			inline Reference<Algorithm> ExtractAlgorithmDeclaration(Data& data_, It& it_, const Reference<Schema>& schema_);
 			inline Reference<Algorithm> ParseAlgorithm(Data& data_, It& it_, const Reference<Schema>& schema_);
+			// Body
+			inline Reference<Body> ExtractBodyDeclaration(Data& data_, It& it_, const Reference<Algorithm>& algorithm_, const Reference<Schema>& schema_);
+			inline Reference<Body> ParseBody(Data& data_, It& it_, const Reference<Algorithm>& algorithm_, const Reference<Schema>& schema_);
+			// Instance
+			inline Reference<Instance> ExtractInstanceDeclaration(Data& data_, It& it_, const Reference<Body>& body_);
+			inline Reference<Instance> ParseInstance(Data& data_, It& it_, const Reference<Body>& body_);
+			// other
 			inline void Preparse(const Reference<Root>& root_);
 			inline void Preparse(const Reference<Space>& space_);
 			inline void Preparse(const Reference<Schema>& schema_);
+			inline void Preparse(const Reference<Body>& body_);
 			inline void Parse(const Reference<Root>& root_);
 			inline void Parse(const Reference<Space>& space_);
 			inline void Parse(const Reference<Schema>& schema_);
+			inline void Parse(const Reference<Algorithm>& algorithm_);
+			inline void Parse(const Reference<Body>& body_);
 		public:
 			inline Output Parse(const Input& input_);
 		};
@@ -391,17 +453,15 @@ inline Nu::Parsing3::Marker::Marker(const Reference<Marker>& this_):
 
 #pragma endregion
 
-#pragma region Markers
-
 #pragma region Token
 
-inline Nu::Parsing3::Markers::Token::Token(const Reference<Token>& this_, const Value& value_):
+inline Nu::Parsing3::Token::Token(const Reference<Token>& this_, const Value& value_):
 	Marker(this_),
 	value(value_)
 {
 }
 
-inline Nu::Parsing3::Markers::Token::Value Nu::Parsing3::Markers::Token::GetValue() const
+inline Nu::Parsing3::Token::Value Nu::Parsing3::Token::GetValue() const
 {
 	return value;
 }
@@ -410,13 +470,13 @@ inline Nu::Parsing3::Markers::Token::Value Nu::Parsing3::Markers::Token::GetValu
 
 #pragma region DeclarationHeader
 
-inline Nu::Parsing3::Markers::DeclarationHeader::DeclarationHeader(const Reference<DeclarationHeader>& this_, const Reference<Name>& name_):
+inline Nu::Parsing3::DeclarationHeader::DeclarationHeader(const Reference<DeclarationHeader>& this_, const Reference<Name>& name_):
 	Marker(this_),
 	name(name_)
 {
 }
 
-inline Nu::Reference<Nu::Parsing3::Name> Nu::Parsing3::Markers::DeclarationHeader::GetName() const
+inline Nu::Reference<Nu::Parsing3::Name> Nu::Parsing3::DeclarationHeader::GetName() const
 {
 	return name;
 }
@@ -425,13 +485,13 @@ inline Nu::Reference<Nu::Parsing3::Name> Nu::Parsing3::Markers::DeclarationHeade
 
 #pragma region Declaration
 
-inline Nu::Parsing3::Markers::Declaration::Declaration(const Reference<Declaration>& this_, const Reference<Name>& name_, const Reference<Unit>& unit_):
+inline Nu::Parsing3::Declaration::Declaration(const Reference<Declaration>& this_, const Reference<Name>& name_, const Reference<Unit>& unit_):
 	DeclarationHeader(this_, name_),
 	unit(unit_)
 {
 }
 
-inline Nu::Reference<Nu::Parsing3::Unit> Nu::Parsing3::Markers::Declaration::GetUnit() const
+inline Nu::Reference<Nu::Parsing3::Unit> Nu::Parsing3::Declaration::GetUnit() const
 {
 	return unit;
 }
@@ -440,12 +500,10 @@ inline Nu::Reference<Nu::Parsing3::Unit> Nu::Parsing3::Markers::Declaration::Get
 
 #pragma region Delimiter
 
-inline Nu::Parsing3::Markers::Delimiter::Delimiter(const Reference<Delimiter>& this_):
+inline Nu::Parsing3::Delimiter::Delimiter(const Reference<Delimiter>& this_):
 	Marker(this_)
 {
 }
-
-#pragma endregion
 
 #pragma endregion
 
@@ -660,6 +718,37 @@ inline bool Nu::Parsing3::BraceAlgorithm::IsEqual(const Reference<Algorithm>& so
 
 #pragma endregion
 
+#pragma region Body
+
+inline Nu::Parsing3::Body::Body(const Reference<Body>& this_, const Markers& markers_):
+	Marker(this_),
+	Scope(this_),
+	MarkersContainer(this_, markers_)
+{
+}
+
+#pragma endregion
+
+#pragma region Command
+
+inline Nu::Parsing3::Command::Command(const Reference<Command>& this_):
+	Marker(this_)
+{
+}
+
+#pragma endregion
+
+#pragma region Instance
+
+inline Nu::Parsing3::Instance::Instance(const Reference<Instance>& this_, const Reference<Schema>& schema_):
+	Marker(this_),
+	Unit(this_),
+	schema(schema_)
+{
+}
+
+#pragma endregion
+
 #pragma region Root
 
 inline Nu::Parsing3::Root::Root(const Reference<Root>& this_, const Markers& markers_):
@@ -745,6 +834,21 @@ inline void Nu::Parsing3::ParenthoodManager::SetValue(const Reference<Name>& nam
 {
 	valueLookup[name_] = unit_;
 }
+inline Nu::Reference<Nu::Parsing3::Body> Nu::Parsing3::ParenthoodManager::GetBody(const Reference<Algorithm>& algorithm_)
+{
+	return bodiesLookup[algorithm_];
+}
+inline void Nu::Parsing3::ParenthoodManager::SetBody(const Reference<Body>& body_, const Reference<Algorithm>& algorithm_)
+{
+	if (bodiesLookup.find(algorithm_) == bodiesLookup.end())
+	{
+		bodiesLookup[algorithm_] = body_;
+	}
+	else
+	{
+		throw Exception(); // TODO
+	}
+}
 
 #pragma endregion
 
@@ -771,9 +875,9 @@ inline Nu::Parsing3::Parser::MarkersSkipRequired::MarkersSkipRequired(const It& 
 
 #pragma endregion
 
-inline Nu::Reference<Nu::Parsing3::Markers::Token> Nu::Parsing3::Parser::Convert(const Reference<Lexing2::Token>& value_)
+inline Nu::Reference<Nu::Parsing3::Token> Nu::Parsing3::Parser::Convert(const Reference<Lexing2::Token>& value_)
 {
-	auto token = Make<Markers::Token>(value_);
+	auto token = Make<Token>(value_);
 
 	return token;
 }
@@ -813,7 +917,7 @@ template<class T> inline typename Nu::Reference<T> Nu::Parsing3::Parser::ParseTo
 {
 	auto o = it_;
 
-	if (auto token = ParseMarker<Markers::Token>(data_, it_))
+	if (auto token = ParseMarker<Token>(data_, it_))
 	{
 		auto value = token->GetValue();
 
@@ -977,8 +1081,8 @@ inline Nu::Reference<Nu::Parsing3::Name> Nu::Parsing3::Parser::ExtractName(Data&
 													{
 														auto markers = Data();
 														{
-															markers.push_back(Make<Markers::Token>(Make<Lexing2::Text>(nameValue)));
-															markers.push_back(Make<Markers::Token>(Make<Lexing2::Text>(textValue.substr(nameValue.size()))));
+															markers.push_back(Make<Token>(Make<Lexing2::Text>(nameValue)));
+															markers.push_back(Make<Token>(Make<Lexing2::Text>(textValue.substr(nameValue.size()))));
 														}
 
 														throw MarkersReplaceRequired(o2, it_, markers);
@@ -999,7 +1103,7 @@ inline Nu::Reference<Nu::Parsing3::Name> Nu::Parsing3::Parser::ExtractName(Data&
 								{
 									auto o2 = it_;
 
-									while (it_ != data_.end() && !UpCast<Markers::DeclarationHeader>(*it_))
+									while (it_ != data_.end() && !UpCast<DeclarationHeader>(*it_))
 									{
 										++it_;
 									}
@@ -1024,8 +1128,8 @@ inline Nu::Reference<Nu::Parsing3::Name> Nu::Parsing3::Parser::ExtractName(Data&
 				{
 					auto markers = Data();
 					{
-						markers.push_back(Make<Markers::Token>(Make<Lexing2::Text>(nameValue)));
-						markers.push_back(Make<Markers::Token>(Make<Lexing2::Text>(value.substr(nameValue.size()))));
+						markers.push_back(Make<Token>(Make<Lexing2::Text>(nameValue)));
+						markers.push_back(Make<Token>(Make<Lexing2::Text>(value.substr(nameValue.size()))));
 					}
 
 					throw MarkersReplaceRequired(o, it_, markers);
@@ -1043,14 +1147,19 @@ inline Nu::Reference<Nu::Parsing3::Name> Nu::Parsing3::Parser::ExtractName(Data&
 inline Nu::Parsing3::Parser::Parser(const Reference<Parser>& this_):
 	Entity(this_)
 {
-	globalNoneSchema = Make<Schema>();
+	globalKeywordSpace		= Make<Keyword>(Keyword::Value::Space);
+	globalKeywordSchema		= Make<Keyword>(Keyword::Value::Schema);
+	globalKeywordAlgorithm	= Make<Keyword>(Keyword::Value::Algorithm);
+	globalKeywordBody		= Make<Keyword>(Keyword::Value::Body);
+	
+	globalNoneSchema		= Make<Schema>();
 }
 
 inline void Nu::Parsing3::Parser::SkipUntilDeclaration(Data& data_, It& it_, const It& o_)
 {
 	auto it = it_;
 
-	while (it != data_.end() && !UpCast<Markers::DeclarationHeader>(*it))
+	while (it != data_.end() && !UpCast<DeclarationHeader>(*it))
 	{
 		++it;
 	}
@@ -1058,7 +1167,7 @@ inline void Nu::Parsing3::Parser::SkipUntilDeclaration(Data& data_, It& it_, con
 	throw MarkersSkipRequired(o_, it);
 }
 
-inline Nu::Reference<Nu::Parsing3::Markers::Delimiter> Nu::Parsing3::Parser::ExtractDelimiter(Data& data_, It& it_)
+inline Nu::Reference<Nu::Parsing3::Delimiter> Nu::Parsing3::Parser::ExtractDelimiter(Data& data_, It& it_)
 {
 	auto o = it_;
 
@@ -1068,7 +1177,7 @@ inline Nu::Reference<Nu::Parsing3::Markers::Delimiter> Nu::Parsing3::Parser::Ext
 
 		if (value == Lexing2::Special::Value::Semicolon)
 		{
-			auto delimiter = Make<Markers::Delimiter>();
+			auto delimiter = Make<Delimiter>();
 
 			return delimiter;
 		}
@@ -1077,11 +1186,11 @@ inline Nu::Reference<Nu::Parsing3::Markers::Delimiter> Nu::Parsing3::Parser::Ext
 	it_ = o;
 	return nullptr;
 }
-inline Nu::Reference<Nu::Parsing3::Markers::Delimiter> Nu::Parsing3::Parser::ParseDelimiter(Data& data_, It& it_)
+inline Nu::Reference<Nu::Parsing3::Delimiter> Nu::Parsing3::Parser::ParseDelimiter(Data& data_, It& it_)
 {
 	auto o = it_;
 
-	if (auto delimiter = ParseMarker<Markers::Delimiter>(data_, it_))
+	if (auto delimiter = ParseMarker<Delimiter>(data_, it_))
 	{
 		return delimiter;
 	}
@@ -1158,7 +1267,7 @@ inline Nu::Reference<Nu::Parsing3::Keyword> Nu::Parsing3::Parser::ParseKeyword(D
 	it_ = o;
 	return nullptr;
 }
-inline Nu::Reference<Nu::Parsing3::Markers::DeclarationHeader> Nu::Parsing3::Parser::ExtractDeclarationHeader(Data& data_, It& it_, const Reference<Scope>& scope_)
+inline Nu::Reference<Nu::Parsing3::DeclarationHeader> Nu::Parsing3::Parser::ExtractDeclarationHeader(Data& data_, It& it_, const Reference<Scope>& scope_)
 {
 	auto o = it_;
 
@@ -1172,7 +1281,7 @@ inline Nu::Reference<Nu::Parsing3::Markers::DeclarationHeader> Nu::Parsing3::Par
 			{
 				auto textValue = text->GetValue();
 				auto name = scope_->Add(textValue);
-				auto declarationHeader = Make<Markers::DeclarationHeader>(name);
+				auto declarationHeader = Make<DeclarationHeader>(name);
 
 				return declarationHeader;
 			}
@@ -1182,11 +1291,11 @@ inline Nu::Reference<Nu::Parsing3::Markers::DeclarationHeader> Nu::Parsing3::Par
 	it_ = o;
 	return nullptr;
 }
-inline Nu::Reference<Nu::Parsing3::Markers::Declaration> Nu::Parsing3::Parser::ParseDeclaration(Data& data_, It& it_, const Reference<Scope>& scope_)
+inline Nu::Reference<Nu::Parsing3::Declaration> Nu::Parsing3::Parser::ParseDeclaration(Data& data_, It& it_, const Reference<Scope>& scope_)
 {
 	auto o = it_;
 	
-	if (auto declaration = ParseMarker<Markers::Declaration>(data_, it_))
+	if (auto declaration = ParseMarker<Declaration>(data_, it_))
 	{
 		auto &unit = declaration->GetUnit();
 
@@ -1201,13 +1310,13 @@ inline Nu::Reference<Nu::Parsing3::Markers::Declaration> Nu::Parsing3::Parser::P
 
 		return declaration;
 	}
-	else if (auto declarationHeader = ParseMarker<Markers::DeclarationHeader>(data_, it_))
+	else if (auto declarationHeader = ParseMarker<DeclarationHeader>(data_, it_))
 	{
 		auto declarationName = declarationHeader->GetName();
 
 		if (auto space = ParseSpace(data_, it_, scope_))
 		{
-			auto declaration = Make<Markers::Declaration>(declarationName, space);
+			auto declaration = Make<Declaration>(declarationName, space);
 
 			parenthoodManager->SetValue(declarationName, space);
 
@@ -1220,7 +1329,7 @@ inline Nu::Reference<Nu::Parsing3::Markers::Declaration> Nu::Parsing3::Parser::P
 		}
 		else if (auto schema = ParseSchema(data_, it_, scope_))
 		{
-			auto declaration = Make<Markers::Declaration>(declarationName, schema);
+			auto declaration = Make<Declaration>(declarationName, schema);
 
 			parenthoodManager->SetValue(declarationName, schema);
 
@@ -1233,7 +1342,7 @@ inline Nu::Reference<Nu::Parsing3::Markers::Declaration> Nu::Parsing3::Parser::P
 		}
 		else if (auto keyword = ParseKeyword(data_, it_, scope_))
 		{
-			auto declaration = Make<Markers::Declaration>(declarationName, keyword);
+			auto declaration = Make<Declaration>(declarationName, keyword);
 
 			parenthoodManager->SetValue(declarationName, keyword);
 
@@ -1246,7 +1355,7 @@ inline Nu::Reference<Nu::Parsing3::Markers::Declaration> Nu::Parsing3::Parser::P
 		}
 		else if (auto unit = ParseNameUnit(data_, it_, scope_))
 		{
-			auto declaration = Make<Markers::Declaration>(declarationName, unit);
+			auto declaration = Make<Declaration>(declarationName, unit);
 
 			parenthoodManager->SetValue(declarationName, unit);
 
@@ -1368,6 +1477,25 @@ inline Nu::Reference<Nu::Parsing3::Schema> Nu::Parsing3::Parser::ParseSchema(Dat
 	it_ = o;
 	return nullptr;
 }
+inline Nu::Reference<Nu::Parsing3::Schema> Nu::Parsing3::Parser::ParseAnySchema(Data& data_, It& it_, const Reference<Scope>& scope_)
+{
+	auto o = it_;
+
+	if (auto schema = ParseSchema(data_, it_, scope_))
+	{
+		return schema;
+	}
+	else if (auto unit = ParseNameUnit(data_, it_, scope_))
+	{
+		if (auto schema = UpCast<Schema>(unit))
+		{
+			return schema;
+		}
+	}
+
+	it_ = o;
+	return nullptr;
+}
 
 inline Nu::Reference<Nu::Parsing3::Algorithm> Nu::Parsing3::Parser::ExtractAlgorithmDeclaration(Data& data_, It& it_, const Reference<Schema>& schema_)
 {
@@ -1375,44 +1503,33 @@ inline Nu::Reference<Nu::Parsing3::Algorithm> Nu::Parsing3::Parser::ExtractAlgor
 
 	if (auto keyword = ParseKeyword(data_, it_, schema_, Keyword::Value::Algorithm))
 	{
-		auto parseAnySchema = [&]() -> Reference<Schema>
-		{
-			if (auto schema = ParseSchema(data_, it_, schema_))
-			{
-				return schema;
-			}
-			else if (auto unit = ParseNameUnit(data_, it_, schema_))
-			{
-				if (auto schema = UpCast<Schema>(unit))
-				{
-					return schema;
-				}
-			}
-
-			return nullptr;
-		};
-
-		if (auto resultSchema = parseAnySchema())
+		if (auto resultSchema = ParseAnySchema(data_, it_, schema_))
 		{
 			if (auto group = ParseToken<Lexing2::Group>(data_, it_))
 			{
 				BraceAlgorithm::Arguments arguments; // TODO: scan arguments
 
+				auto markers = Move(Convert(group->GetTokens()));
+				auto braceAlgorithm = Make<BraceAlgorithm>(group->GetOpening(), group->GetClosing(), arguments, resultSchema, Move(markers));
+
 				if (auto semicolon = ParseSpecialToken(data_, it_, Lexing2::Special::Value::Semicolon))
 				{
-					// replace with ReplaceRequire?
-					auto markers = Move(Convert(group->GetTokens()));
-					auto braceAlgorithm = Make<BraceAlgorithm>(group->GetOpening(), group->GetClosing(), arguments, resultSchema, Move(markers));
-					{
-						schema_->Add(braceAlgorithm);
+					schema_->Add(braceAlgorithm);
+					parenthoodManager->SetParent(braceAlgorithm, schema_);
 
-						parenthoodManager->SetParent(braceAlgorithm, schema_);
-					}
+					return braceAlgorithm;
+				}
+				else if (auto body = ParseBody(data_, it_, braceAlgorithm, schema_))
+				{
+					schema_->Add(braceAlgorithm);
+					parenthoodManager->SetParent(braceAlgorithm, schema_);
+
+					parenthoodManager->SetBody(body, braceAlgorithm);
 
 					return braceAlgorithm;
 				}
 
-				throw NotImplementedException(); // TODO: full form
+				throw Exception();
 			}
 
 			throw NotImplementedException(); // TODO: other types of algorithms
@@ -1433,6 +1550,10 @@ inline Nu::Reference<Nu::Parsing3::Algorithm> Nu::Parsing3::Parser::ParseAlgorit
 	if (auto algorithm = ParseMarker<Algorithm>(data_, it_))
 	{
 		// TODO: Parse(algorithm);
+		if (auto body = ParseBody(data_, it_, algorithm, schema_))
+		{
+			// TODO: Parse(body)
+		}
 
 		return algorithm;
 	}
@@ -1450,6 +1571,102 @@ inline Nu::Reference<Nu::Parsing3::Algorithm> Nu::Parsing3::Parser::ParseAlgorit
 	return nullptr;
 }
 
+inline Nu::Reference<Nu::Parsing3::Body> Nu::Parsing3::Parser::ExtractBodyDeclaration(Data& data_, It& it_, const Reference<Algorithm>& algorithm_, const Reference<Schema>& schema_)
+{
+	auto o = it_;
+
+	if (auto keyword = ParseKeyword(data_, it_, schema_, Keyword::Value::Body))
+	{
+		if (auto group = ParseToken<Lexing2::Group>(data_, it_))
+		{
+			auto markers = Move(Convert(group->GetTokens()));
+			auto body = Make<Body>(Move(markers));
+			{
+				// TODO: connect body to algorithm
+
+				parenthoodManager->SetParent(body, algorithm_);
+			}
+
+			return body;
+		}
+		else
+		{
+			throw Exception(); // TODO
+		}
+	}
+
+	it_ = o;
+	return nullptr;
+}
+inline Nu::Reference<Nu::Parsing3::Body> Nu::Parsing3::Parser::ParseBody(Data& data_, It& it_, const Reference<Algorithm>& algorithm_, const Reference<Schema>& schema_)
+{
+	auto o = it_;
+
+	if (auto body = ParseMarker<Body>(data_, it_))
+	{
+		// TODO: Parse(algorithm);
+
+		return body;
+	}
+	else if (auto bodyDeclaration = ExtractBodyDeclaration(data_, it_, algorithm_, schema_))
+	{
+		MarkersContainer::Markers markers;
+		{
+			markers.push_back(bodyDeclaration);
+		}
+
+		throw MarkersReplaceRequired(o, it_, markers);
+	}
+
+	it_ = o;
+	return nullptr;
+}
+
+inline Nu::Reference<Nu::Parsing3::Instance> Nu::Parsing3::Parser::ExtractInstanceDeclaration(Data& data_, It& it_, const Reference<Body>& body_)
+{
+	auto o = it_;
+
+	if (auto keyword = ParseKeyword(data_, it_, body_, Keyword::Value::Make))
+	{
+		if (auto schema = ParseAnySchema(data_, it_, body_))
+		{
+			auto instance = Make<Instance>(schema);
+			{
+				parenthoodManager->SetParent(instance, body_);
+			}
+
+			return instance;
+		}
+		else
+		{
+			throw Exception(); // TODO
+		}
+	}
+
+	it_ = o;
+	return nullptr;
+}
+inline Nu::Reference<Nu::Parsing3::Instance> Nu::Parsing3::Parser::ParseInstance(Data& data_, It& it_, const Reference<Body>& body_)
+{
+	auto o = it_;
+
+	if (auto instance = ParseMarker<Instance>(data_, it_))
+	{
+		return instance;
+	}
+	else if (auto instanceDeclaration = ExtractInstanceDeclaration(data_, it_, body_))
+	{
+		MarkersContainer::Markers markers;
+		{
+			markers.push_back(instance);
+		}
+
+		throw MarkersReplaceRequired(o, it_, markers);
+	}
+
+	it_ = o;
+	return nullptr;
+}
 
 inline void Nu::Parsing3::Parser::Preparse(const Reference<Root>& root_)
 {
@@ -1553,9 +1770,44 @@ inline void Nu::Parsing3::Parser::Preparse(const Reference<Schema>& schema_)
 		}
 	}
 }
+inline void Nu::Parsing3::Parser::Preparse(const Reference<Body>& body_)
+{
+	auto &markers = body_->GetMarkers();
+	auto it = markers.begin();
+
+	/*TODO:
+	while (it != markers.end())
+	{
+		try
+		{
+			auto o = it;
+	
+			++it;
+		}
+		catch (MarkersReplaceRequired replace)
+		{
+			auto i = markers.erase(replace.begin, replace.end);
+	
+			for (auto &m : replace.markers)
+			{
+				i = markers.insert(i, m);
+			}
+	
+			it = markers.begin();
+		}
+	}*/
+}
 
 inline void Nu::Parsing3::Parser::Parse(const Reference<Root>& root_)
 {
+	/*auto &pendingDeclarations = allPendingDeclarations[root_];
+	{
+		if (!pendingDeclarations)
+		{
+			pendingDeclarations = MakeReference<Stack<Reference<Declaration>>>();
+		}
+	}*/
+
 	Preparse(root_);
 
 	auto &markers = root_->GetMarkers();
@@ -1565,28 +1817,40 @@ inline void Nu::Parsing3::Parser::Parse(const Reference<Root>& root_)
 	{
 		try
 		{
-			auto o = it;
+			/*try
+			{*/
+				auto o = it;
 
-			if (auto space = ParseSpace(markers, it, root_))
+				if (auto space = ParseSpace(markers, it, root_))
+				{
+					// do nothing
+				}
+				else if (auto schema = ParseSchema(markers, it, root_))
+				{
+					// do nothing
+				}
+				else if (auto declaration = ParseDeclaration(markers, it, root_))
+				{
+					// do nothing
+				}
+				else if (auto delimiter = ParseDelimiter(markers, it))
+				{
+					// do nothing
+				}
+				else
+				{
+					throw Exception();
+				}
+			/*}
+			catch (...)
 			{
-				// do nothing
-			}
-			else if (auto schema = ParseSchema(markers, it, root_))
-			{
-				// do nothing
-			}
-			else if (auto declaration = ParseDeclaration(markers, it, root_))
-			{
-				// do nothing
-			}
-			else if (auto delimiter = ParseDelimiter(markers, it))
-			{
-				// do nothing
-			}
-			else
-			{
-				throw Exception();
-			}
+				while (!(pendingDeclarations->empty()))
+				{
+					pendingDeclarations->pop();
+				}
+			
+				throw;
+			}*/
 		}
 		catch (MarkersReplaceRequired replace)
 		{
@@ -1705,6 +1969,60 @@ inline void Nu::Parsing3::Parser::Parse(const Reference<Schema>& schema_)
 		}
 	}
 }
+inline void Nu::Parsing3::Parser::Parse(const Reference<Algorithm>& algorithm_)
+{
+	// TODO: Preparse(algorithm_)
+	// TODO: parse content
+
+	auto body = parenthoodManager->GetBody(algorithm_);
+
+	Parse(body);
+}
+inline void Nu::Parsing3::Parser::Parse(const Reference<Body>& body_)
+{
+	Preparse(body_);
+	
+	auto &markers = body_->GetMarkers();
+	auto it = markers.begin();
+
+	while (it != markers.end())
+	{
+		try
+		{
+			auto o = it;
+
+			if (auto delimiter = ParseDelimiter(markers, it))
+			{
+				// do nothing
+			}
+			else if (auto instance = ParseInstance(markers, it, body_))
+			{
+				// TODO
+			}
+			else
+			{
+				throw Exception();
+			}
+		}
+		catch (MarkersReplaceRequired replace)
+		{
+			auto i = markers.erase(replace.begin, replace.end);
+
+			for (auto &m : replace.markers)
+			{
+				i = markers.insert(i, m);
+			}
+
+			it = markers.begin();
+		}
+		catch (MarkersSkipRequired skip)
+		{
+			isMarkerSkipped = true;
+
+			it = skip.end;
+		}
+	}
+}
 
 inline Nu::Parsing3::Parser::Output Nu::Parsing3::Parser::Parse(const Input& input_)
 {
@@ -1713,23 +2031,26 @@ inline Nu::Parsing3::Parser::Output Nu::Parsing3::Parser::Parse(const Input& inp
 	auto spaceNameValue = Name::Value("space");
 	{
 		auto spaceName = root->Add(spaceNameValue);
-		auto spaceKeyword = Make<Keyword>(Keyword::Value::Space);
 
-		parenthoodManager->SetValue(spaceName, spaceKeyword);
+		parenthoodManager->SetValue(spaceName, globalKeywordSpace);
 	}
 	auto schemaNameValue = Name::Value("schema");
 	{
 		auto schemaName = root->Add(schemaNameValue);
-		auto schemaKeyword = Make<Keyword>(Keyword::Value::Schema);
 
-		parenthoodManager->SetValue(schemaName, schemaKeyword);
+		parenthoodManager->SetValue(schemaName, globalKeywordSchema);
 	}
 	auto algorithmNameValue = Name::Value("algorithm");
 	{
 		auto algorithmName = root->Add(algorithmNameValue);
-		auto algorithmKeyword = Make<Keyword>(Keyword::Value::Algorithm);
 
-		parenthoodManager->SetValue(algorithmName, algorithmKeyword);
+		parenthoodManager->SetValue(algorithmName, globalKeywordAlgorithm);
+	}
+	auto bodyNameValue = Name::Value("body");
+	{
+		auto bodyName = root->Add(bodyNameValue);
+
+		parenthoodManager->SetValue(bodyName, globalKeywordBody);
 	}
 
 	auto noneNameValue = Name::Value("none");

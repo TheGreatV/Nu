@@ -388,7 +388,7 @@ namespace Testing
 
 				MarkersContainer::Markers markers;
 				{
-					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("a")));
+					markers.push_back(Make<Token>(Make<Nu::Lexing2::Text>("a")));
 				};
 				auto it = markers.begin();
 
@@ -409,8 +409,8 @@ namespace Testing
 
 				MarkersContainer::Markers markers;
 				{
-					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("a")));
-					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("b")));
+					markers.push_back(Make<Token>(Make<Nu::Lexing2::Text>("a")));
+					markers.push_back(Make<Token>(Make<Nu::Lexing2::Text>("b")));
 				};
 				auto it = markers.begin();
 
@@ -434,7 +434,7 @@ namespace Testing
 
 				MarkersContainer::Markers markers1;
 				{
-					markers1.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("a")));
+					markers1.push_back(Make<Token>(Make<Nu::Lexing2::Text>("a")));
 				};
 				auto it1 = markers1.begin();
 
@@ -447,7 +447,7 @@ namespace Testing
 
 				MarkersContainer::Markers markers2;
 				{
-					markers2.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("b")));
+					markers2.push_back(Make<Token>(Make<Nu::Lexing2::Text>("b")));
 				};
 				auto it2 = markers2.begin();
 
@@ -469,7 +469,7 @@ namespace Testing
 
 				MarkersContainer::Markers markers1;
 				{
-					markers1.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("a")));
+					markers1.push_back(Make<Token>(Make<Nu::Lexing2::Text>("a")));
 				};
 				auto it1 = markers1.begin();
 
@@ -482,8 +482,8 @@ namespace Testing
 
 				MarkersContainer::Markers markers2;
 				{
-					markers2.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Special>(Nu::Lexing2::Special::Value::Dot)));
-					markers2.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("a")));
+					markers2.push_back(Make<Token>(Make<Nu::Lexing2::Special>(Nu::Lexing2::Special::Value::Dot)));
+					markers2.push_back(Make<Token>(Make<Nu::Lexing2::Text>("a")));
 				};
 				auto it2 = markers2.begin();
 
@@ -509,7 +509,7 @@ namespace Testing
 
 				MarkersContainer::Markers markers1;
 				{
-					markers1.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("a")));
+					markers1.push_back(Make<Token>(Make<Nu::Lexing2::Text>("a")));
 				};
 				auto it1 = markers1.begin();
 
@@ -522,8 +522,8 @@ namespace Testing
 
 				MarkersContainer::Markers markers2;
 				{
-					markers2.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Special>(Nu::Lexing2::Special::Value::Dot)));
-					markers2.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("a")));
+					markers2.push_back(Make<Token>(Make<Nu::Lexing2::Special>(Nu::Lexing2::Special::Value::Dot)));
+					markers2.push_back(Make<Token>(Make<Nu::Lexing2::Text>("a")));
 				};
 				auto it2 = markers2.begin();
 
@@ -546,7 +546,7 @@ namespace Testing
 
 				MarkersContainer::Markers markers1;
 				{
-					markers1.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("ab")));
+					markers1.push_back(Make<Token>(Make<Nu::Lexing2::Text>("ab")));
 				};
 				auto it1 = markers1.begin();
 
@@ -559,7 +559,7 @@ namespace Testing
 
 				MarkersContainer::Markers markers2;
 				{
-					markers2.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("a")));
+					markers2.push_back(Make<Token>(Make<Nu::Lexing2::Text>("a")));
 				};
 				auto it2 = markers2.begin();
 
@@ -580,7 +580,7 @@ namespace Testing
 
 				MarkersContainer::Markers markers;
 				{
-					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("ab")));
+					markers.push_back(Make<Token>(Make<Nu::Lexing2::Text>("ab")));
 				};
 				auto it = markers.begin();
 
@@ -598,8 +598,8 @@ namespace Testing
 					Assert::IsTrue(
 						division_.begin == markers.begin() &&
 						division_.end == markers.end() &&
-						UpCast<Lexing2::Text>(UpCast<Markers::Token>(m1)->GetValue())->GetValue() == "a" &&
-						UpCast<Lexing2::Text>(UpCast<Markers::Token>(m2)->GetValue())->GetValue() == "b",
+						UpCast<Lexing2::Text>(UpCast<Token>(m1)->GetValue())->GetValue() == "a" &&
+						UpCast<Lexing2::Text>(UpCast<Token>(m2)->GetValue())->GetValue() == "b",
 						L"Verify that correct exception is thrown"
 					);
 				}
@@ -622,9 +622,9 @@ namespace Testing
 
 				MarkersContainer::Markers markers;
 				{
-					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("a")));
-					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Special>(Nu::Lexing2::Special::Value::Dot)));
-					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("bc")));
+					markers.push_back(Make<Token>(Make<Nu::Lexing2::Text>("a")));
+					markers.push_back(Make<Token>(Make<Nu::Lexing2::Special>(Nu::Lexing2::Special::Value::Dot)));
+					markers.push_back(Make<Token>(Make<Nu::Lexing2::Text>("bc")));
 				};
 				auto it = markers.begin();
 
@@ -642,8 +642,8 @@ namespace Testing
 					Assert::IsTrue(
 						division_.begin == (++(++markers.begin())) &&
 						division_.end == (markers.end()) &&
-						UpCast<Lexing2::Text>(UpCast<Markers::Token>(m1)->GetValue())->GetValue() == "b" &&
-						UpCast<Lexing2::Text>(UpCast<Markers::Token>(m2)->GetValue())->GetValue() == "c",
+						UpCast<Lexing2::Text>(UpCast<Token>(m1)->GetValue())->GetValue() == "b" &&
+						UpCast<Lexing2::Text>(UpCast<Token>(m2)->GetValue())->GetValue() == "c",
 						L"Verify that correct exception is thrown"
 					);
 				}
@@ -652,9 +652,9 @@ namespace Testing
 			{
 				MarkersContainer::Markers markers;
 				{
-					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("a")));
-					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Special>(Nu::Lexing2::Special::Value::Dot)));
-					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("b")));
+					markers.push_back(Make<Token>(Make<Nu::Lexing2::Text>("a")));
+					markers.push_back(Make<Token>(Make<Nu::Lexing2::Special>(Nu::Lexing2::Special::Value::Dot)));
+					markers.push_back(Make<Token>(Make<Nu::Lexing2::Text>("b")));
 				};
 				auto it = markers.begin();
 
@@ -683,10 +683,10 @@ namespace Testing
 			{
 				MarkersContainer::Markers markers;
 				{
-					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("a")));
-					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Special>(Nu::Lexing2::Special::Value::Dot)));
-					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("b")));
-					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("c")));
+					markers.push_back(Make<Token>(Make<Nu::Lexing2::Text>("a")));
+					markers.push_back(Make<Token>(Make<Nu::Lexing2::Special>(Nu::Lexing2::Special::Value::Dot)));
+					markers.push_back(Make<Token>(Make<Nu::Lexing2::Text>("b")));
+					markers.push_back(Make<Token>(Make<Nu::Lexing2::Text>("c")));
 				};
 				auto it = markers.begin();
 
@@ -721,9 +721,9 @@ namespace Testing
 
 				MarkersContainer::Markers markers;
 				{
-					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("a")));
-					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Special>(Nu::Lexing2::Special::Value::Dot)));
-					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("b")));
+					markers.push_back(Make<Token>(Make<Nu::Lexing2::Text>("a")));
+					markers.push_back(Make<Token>(Make<Nu::Lexing2::Special>(Nu::Lexing2::Special::Value::Dot)));
+					markers.push_back(Make<Token>(Make<Nu::Lexing2::Text>("b")));
 				};
 				auto it = markers.begin();
 
@@ -745,9 +745,9 @@ namespace Testing
 			{
 				MarkersContainer::Markers markers;
 				{
-					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Special>(Nu::Lexing2::Special::Value::Dot)));
-					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Special>(Nu::Lexing2::Special::Value::Dot)));
-					markers.push_back(Make<Markers::Token>(Make<Nu::Lexing2::Text>("ab")));
+					markers.push_back(Make<Token>(Make<Nu::Lexing2::Special>(Nu::Lexing2::Special::Value::Dot)));
+					markers.push_back(Make<Token>(Make<Nu::Lexing2::Special>(Nu::Lexing2::Special::Value::Dot)));
+					markers.push_back(Make<Token>(Make<Nu::Lexing2::Text>("ab")));
 				};
 				auto it = markers.begin();
 
@@ -840,7 +840,7 @@ namespace Testing
 					L"Verify that there is 1 marker"
 				);
 
-				auto delimiter = UpCast<Markers::Delimiter>(*markers.begin());
+				auto delimiter = UpCast<Delimiter>(*markers.begin());
 
 				Assert::IsTrue(
 					delimiter != nullptr,
@@ -910,7 +910,7 @@ namespace Testing
 				);
 
 				Assert::IsTrue(
-					UpCast<Parsing3::Markers::Delimiter>(*(++markers.begin())) != nullptr,
+					UpCast<Parsing3::Delimiter>(*(++markers.begin())) != nullptr,
 					L"Verify that marker is delimiter"
 				);
 			}
@@ -992,7 +992,7 @@ namespace Testing
 				);
 
 				Assert::IsTrue(
-					UpCast<Parsing3::Markers::Delimiter>(*(++markers.begin())) != nullptr,
+					UpCast<Parsing3::Delimiter>(*(++markers.begin())) != nullptr,
 					L"Verify that marker is delimiter"
 				);
 
@@ -1064,7 +1064,7 @@ namespace Testing
 				);
 
 				Assert::IsTrue(
-					UpCast<Parsing3::Markers::Delimiter>(*(++markers.begin())) != nullptr,
+					UpCast<Parsing3::Delimiter>(*(++markers.begin())) != nullptr,
 					L"Verify that marker is delimiter"
 				);
 			}
@@ -1146,7 +1146,7 @@ namespace Testing
 				);
 
 				Assert::IsTrue(
-					UpCast<Parsing3::Markers::Delimiter>(*(++markers.begin())) != nullptr,
+					UpCast<Parsing3::Delimiter>(*(++markers.begin())) != nullptr,
 					L"Verify that marker is delimiter"
 				);
 
@@ -2248,6 +2248,74 @@ namespace Testing
 					braceAlgorithm->GetArguments().empty(),
 					L"Verify that algorithm arguments is empty"
 				);
+			}
+
+			TEST_METHOD(Parser_Test)
+			{
+				auto parser = Make<Parser>();
+
+				auto input = Make<Lexing2::Container>();
+				{
+					Lexing2::Container::Tokens x;
+					{
+						x.push_back(Make<Lexing2::Text>("make"));
+						x.push_back(Make<Lexing2::Text>("none"));
+					}
+
+					Lexing2::Container::Tokens nested;
+					{
+						nested.push_back(Make<Lexing2::Text>("algorithm"));
+						nested.push_back(Make<Lexing2::Text>("none"));
+						nested.push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Round, Lexing2::Group::BraceType::Round));
+						nested.push_back(Make<Lexing2::Text>("body"));
+						nested.push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure, x));
+					}
+
+					input->GetTokens().push_back(Make<Lexing2::Text>("schema"));
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure, nested));
+				}
+
+				auto output = parser->Parse(input);
+				auto &markers = output->GetMarkers();
+				auto &names = output->GetNames();
+
+				/*auto schema = UpCast<Parsing3::Schema>(parser->parenthoodManager->GetValue(names["X"][0]));
+				auto &algorithms = schema->GetAlgorithms();
+
+				Assert::IsTrue(
+					algorithms.size() == 1,
+					L"Verify that there is exactly 1 algorithm"
+				);
+
+				auto algorithm = algorithms[0];
+
+				auto resultSchema = UpCast<Parsing3::Schema>(parser->parenthoodManager->GetValue(names["A"][0]));
+
+				Assert::IsTrue(
+					algorithm->GetResult() == resultSchema,
+					L"Verify that algorithm result is as expected"
+				);
+
+				auto braceAlgorithm = UpCast<Parsing3::BraceAlgorithm>(algorithm);
+
+				Assert::IsTrue(
+					braceAlgorithm != nullptr,
+					L"Verify that algorithm is Brace Algorithm"
+				);
+
+				Assert::IsTrue(
+					braceAlgorithm->GetOpening() == Parsing3::BraceAlgorithm::BraceType::Round,
+					L"Verify that algorithm opening is Round"
+				);
+				Assert::IsTrue(
+					braceAlgorithm->GetClosing() == Parsing3::BraceAlgorithm::BraceType::Round,
+					L"Verify that algorithm closing is Round"
+				);
+
+				Assert::IsTrue(
+					braceAlgorithm->GetArguments().empty(),
+					L"Verify that algorithm arguments is empty"
+				);*/
 			}
 		};
 
