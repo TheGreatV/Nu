@@ -14,13 +14,9 @@ namespace Nu
 	namespace Parsing3
 	{
 		class Marker;
-		namespace Markers
-		{
-			class Token;
-			class DeclarationHeader;
-			class Declaration;
-			class Delimiter;
-		}
+		class Token;
+		class Declaration;
+		class Delimiter;
 		class MarkersContainer;
 		class Name;
 		class Unit;
@@ -64,35 +60,22 @@ namespace Nu
 		public:
 			inline Value GetValue() const;
 		};
-		class DeclarationHeader:
+		class Declaration:
 			public Marker
 		{
+		public:
+			friend Parser;
 		protected:
 			const Reference<Name> name;
 		public:
-			inline DeclarationHeader() = delete;
-			inline DeclarationHeader(const Reference<DeclarationHeader>& this_, const Reference<Name>& name_);
-			inline DeclarationHeader(const DeclarationHeader&) = delete;
-			virtual ~DeclarationHeader() override = default;
-		public:
-			inline DeclarationHeader& operator = (const DeclarationHeader&) = delete;
-		public:
-			inline Reference<Name> GetName() const;
-		};
-		class Declaration:
-			public DeclarationHeader
-		{
-		protected:
-			const Reference<Unit> unit;
-		public:
 			inline Declaration() = delete;
-			inline Declaration(const Reference<Declaration>& this_, const Reference<Name>& name_, const Reference<Unit>& unit_);
+			inline Declaration(const Reference<Declaration>& this_, const Reference<Name>& name_);
 			inline Declaration(const Declaration&) = delete;
 			virtual ~Declaration() override = default;
 		public:
 			inline Declaration& operator = (const Declaration&) = delete;
 		public:
-			inline Reference<Unit> GetUnit() const;
+			inline Reference<Name> GetName() const;
 		};
 		class Delimiter:
 			public Marker
@@ -388,7 +371,7 @@ namespace Nu
 			inline Reference<Unit> ParseNameUnit(Data& data_, It& it_, const Reference<Scope>& scope_);
 			inline Reference<Keyword> ParseKeyword(Data& data_, It& it_, const Reference<Scope>& scope_, const Keyword::Value& value_ = Keyword::Value::None);
 			// Declaration
-			inline Reference<DeclarationHeader> ExtractDeclarationHeader(Data& data_, It& it_, const Reference<Scope>& scope_);
+			inline Reference<Declaration> ExtractDeclaration(Data& data_, It& it_, const Reference<Scope>& scope_);
 			inline Reference<Declaration> ParseDeclaration(Data& data_, It& it_, const Reference<Scope>& scope_);
 			// Space
 			inline Reference<Space> ExtractSpaceDeclaration(Data& data_, It& it_, const Reference<Scope>& scope_);
@@ -468,32 +451,17 @@ inline Nu::Parsing3::Token::Value Nu::Parsing3::Token::GetValue() const
 
 #pragma endregion
 
-#pragma region DeclarationHeader
+#pragma region Declaration
 
-inline Nu::Parsing3::DeclarationHeader::DeclarationHeader(const Reference<DeclarationHeader>& this_, const Reference<Name>& name_):
+inline Nu::Parsing3::Declaration::Declaration(const Reference<Declaration>& this_, const Reference<Name>& name_):
 	Marker(this_),
 	name(name_)
 {
 }
 
-inline Nu::Reference<Nu::Parsing3::Name> Nu::Parsing3::DeclarationHeader::GetName() const
+inline Nu::Reference<Nu::Parsing3::Name> Nu::Parsing3::Declaration::GetName() const
 {
 	return name;
-}
-
-#pragma endregion
-
-#pragma region Declaration
-
-inline Nu::Parsing3::Declaration::Declaration(const Reference<Declaration>& this_, const Reference<Name>& name_, const Reference<Unit>& unit_):
-	DeclarationHeader(this_, name_),
-	unit(unit_)
-{
-}
-
-inline Nu::Reference<Nu::Parsing3::Unit> Nu::Parsing3::Declaration::GetUnit() const
-{
-	return unit;
 }
 
 #pragma endregion
@@ -1103,7 +1071,7 @@ inline Nu::Reference<Nu::Parsing3::Name> Nu::Parsing3::Parser::ExtractName(Data&
 								{
 									auto o2 = it_;
 
-									while (it_ != data_.end() && !UpCast<DeclarationHeader>(*it_))
+									while (it_ != data_.end() && !UpCast<Declaration>(*it_))
 									{
 										++it_;
 									}
@@ -1159,7 +1127,7 @@ inline void Nu::Parsing3::Parser::SkipUntilDeclaration(Data& data_, It& it_, con
 {
 	auto it = it_;
 
-	while (it != data_.end() && !UpCast<DeclarationHeader>(*it))
+	while (it != data_.end() && !UpCast<Declaration>(*it))
 	{
 		++it;
 	}
@@ -1267,7 +1235,8 @@ inline Nu::Reference<Nu::Parsing3::Keyword> Nu::Parsing3::Parser::ParseKeyword(D
 	it_ = o;
 	return nullptr;
 }
-inline Nu::Reference<Nu::Parsing3::DeclarationHeader> Nu::Parsing3::Parser::ExtractDeclarationHeader(Data& data_, It& it_, const Reference<Scope>& scope_)
+
+inline Nu::Reference<Nu::Parsing3::Declaration> Nu::Parsing3::Parser::ExtractDeclaration(Data& data_, It& it_, const Reference<Scope>& scope_)
 {
 	auto o = it_;
 
@@ -1281,7 +1250,7 @@ inline Nu::Reference<Nu::Parsing3::DeclarationHeader> Nu::Parsing3::Parser::Extr
 			{
 				auto textValue = text->GetValue();
 				auto name = scope_->Add(textValue);
-				auto declarationHeader = Make<DeclarationHeader>(name);
+				auto declarationHeader = Make<Declaration>(name);
 
 				return declarationHeader;
 			}
@@ -1297,75 +1266,7 @@ inline Nu::Reference<Nu::Parsing3::Declaration> Nu::Parsing3::Parser::ParseDecla
 	
 	if (auto declaration = ParseMarker<Declaration>(data_, it_))
 	{
-		auto &unit = declaration->GetUnit();
-
-		if (auto space = UpCast<Space>(unit))
-		{
-			Parse(space);
-		}
-		else if (auto schema = UpCast<Schema>(unit))
-		{
-			Parse(schema);
-		}
-
 		return declaration;
-	}
-	else if (auto declarationHeader = ParseMarker<DeclarationHeader>(data_, it_))
-	{
-		auto declarationName = declarationHeader->GetName();
-
-		if (auto space = ParseSpace(data_, it_, scope_))
-		{
-			auto declaration = Make<Declaration>(declarationName, space);
-
-			parenthoodManager->SetValue(declarationName, space);
-
-			MarkersContainer::Markers markers;
-			{
-				markers.push_back(declaration);
-			}
-
-			throw MarkersReplaceRequired(o, it_, markers);
-		}
-		else if (auto schema = ParseSchema(data_, it_, scope_))
-		{
-			auto declaration = Make<Declaration>(declarationName, schema);
-
-			parenthoodManager->SetValue(declarationName, schema);
-
-			MarkersContainer::Markers markers;
-			{
-				markers.push_back(declaration);
-			}
-
-			throw MarkersReplaceRequired(o, it_, markers);
-		}
-		else if (auto keyword = ParseKeyword(data_, it_, scope_))
-		{
-			auto declaration = Make<Declaration>(declarationName, keyword);
-
-			parenthoodManager->SetValue(declarationName, keyword);
-
-			MarkersContainer::Markers markers;
-			{
-				markers.push_back(declaration);
-			}
-
-			throw MarkersReplaceRequired(o, it_, markers);
-		}
-		else if (auto unit = ParseNameUnit(data_, it_, scope_))
-		{
-			auto declaration = Make<Declaration>(declarationName, unit);
-
-			parenthoodManager->SetValue(declarationName, unit);
-
-			MarkersContainer::Markers markers;
-			{
-				markers.push_back(declaration);
-			}
-
-			throw MarkersReplaceRequired(o, it_, markers);
-		}
 	}
 
 	it_ = o;
@@ -1679,11 +1580,11 @@ inline void Nu::Parsing3::Parser::Preparse(const Reference<Root>& root_)
 		{
 			auto o = it;
 
-			if (auto declarationHeader = ExtractDeclarationHeader(markers, it, root_))
+			if (auto declaration = ExtractDeclaration(markers, it, root_))
 			{
 				MarkersContainer::Markers markers;
 				{
-					markers.push_back(declarationHeader);
+					markers.push_back(declaration);
 				}
 
 				throw MarkersReplaceRequired(o, it, markers);
@@ -1717,11 +1618,11 @@ inline void Nu::Parsing3::Parser::Preparse(const Reference<Space>& space_)
 		{
 			auto o = it;
 
-			if (auto declarationHeader = ExtractDeclarationHeader(markers, it, space_))
+			if (auto declaration = ExtractDeclaration(markers, it, space_))
 			{
 				MarkersContainer::Markers markers;
 				{
-					markers.push_back(declarationHeader);
+					markers.push_back(declaration);
 				}
 
 				throw MarkersReplaceRequired(o, it, markers);
@@ -1754,6 +1655,8 @@ inline void Nu::Parsing3::Parser::Preparse(const Reference<Schema>& schema_)
 		try
 		{
 			auto o = it;
+
+			// TODO
 
 			++it;
 		}
@@ -1831,7 +1734,78 @@ inline void Nu::Parsing3::Parser::Parse(const Reference<Root>& root_)
 				}
 				else if (auto declaration = ParseDeclaration(markers, it, root_))
 				{
-					// do nothing
+					if (auto space = ParseSpace(markers, it, root_))
+					{
+						auto declarationName = declaration->GetName();
+						auto value = parenthoodManager->GetValue(declarationName);
+
+						if (value)
+						{
+							if (space != value)
+							{
+								throw Exception(); // TODO
+							}
+						}
+						else
+						{
+							parenthoodManager->SetValue(declarationName, space);
+						}
+					}
+					else if (auto schema = ParseSchema(markers, it, root_))
+					{
+						auto declarationName = declaration->GetName();
+						auto value = parenthoodManager->GetValue(declarationName);
+
+						if (value)
+						{
+							if (schema != value)
+							{
+								throw Exception(); // TODO
+							}
+						}
+						else
+						{
+							parenthoodManager->SetValue(declarationName, schema);
+						}
+					}
+					else if (auto keyword = ParseKeyword(markers, it, root_))
+					{
+						auto declarationName = declaration->GetName();
+						auto value = parenthoodManager->GetValue(declarationName);
+
+						if (value)
+						{
+							if (keyword != value)
+							{
+								throw Exception(); // TODO
+							}
+						}
+						else
+						{
+							parenthoodManager->SetValue(declarationName, keyword);
+						}
+					}
+					else if (auto unit = ParseNameUnit(markers, it, root_))
+					{
+						auto declarationName = declaration->GetName();
+						auto value = parenthoodManager->GetValue(declarationName);
+
+						if (value)
+						{
+							if (unit != value)
+							{
+								throw Exception(); // TODO
+							}
+						}
+						else
+						{
+							parenthoodManager->SetValue(declarationName, unit);
+						}
+					}
+					else
+					{
+						throw Exception(); // TODO
+					}
 				}
 				else if (auto delimiter = ParseDelimiter(markers, it))
 				{
@@ -1894,7 +1868,78 @@ inline void Nu::Parsing3::Parser::Parse(const Reference<Space>& space_)
 			}
 			else if (auto declaration = ParseDeclaration(markers, it, space_))
 			{
-				// do nothing
+				if (auto space = ParseSpace(markers, it, space_))
+				{
+					auto declarationName = declaration->GetName();
+					auto value = parenthoodManager->GetValue(declarationName);
+
+					if (value)
+					{
+						if (space != value)
+						{
+							throw Exception(); // TODO
+						}
+					}
+					else
+					{
+						parenthoodManager->SetValue(declarationName, space);
+					}
+				}
+				else if (auto schema = ParseSchema(markers, it, space_))
+				{
+					auto declarationName = declaration->GetName();
+					auto value = parenthoodManager->GetValue(declarationName);
+
+					if (value)
+					{
+						if (schema != value)
+						{
+							throw Exception(); // TODO
+						}
+					}
+					else
+					{
+						parenthoodManager->SetValue(declarationName, schema);
+					}
+				}
+				else if (auto keyword = ParseKeyword(markers, it, space_))
+				{
+					auto declarationName = declaration->GetName();
+					auto value = parenthoodManager->GetValue(declarationName);
+
+					if (value)
+					{
+						if (keyword != value)
+						{
+							throw Exception(); // TODO
+						}
+					}
+					else
+					{
+						parenthoodManager->SetValue(declarationName, keyword);
+					}
+				}
+				else if (auto unit = ParseNameUnit(markers, it, space_))
+				{
+					auto declarationName = declaration->GetName();
+					auto value = parenthoodManager->GetValue(declarationName);
+
+					if (value)
+					{
+						if (unit != value)
+						{
+							throw Exception(); // TODO
+						}
+					}
+					else
+					{
+						parenthoodManager->SetValue(declarationName, unit);
+					}
+				}
+				else
+				{
+					throw Exception(); // TODO
+				}
 			}
 			else if (auto delimiter = ParseDelimiter(markers, it))
 			{
