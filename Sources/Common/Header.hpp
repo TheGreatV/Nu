@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 #include <array>
+#include <stack>
 #include <vector>
 #include <list>
 #include <map>
@@ -28,6 +29,7 @@ namespace Nu
 	template<class Type>				using Reference = std::shared_ptr<Type>;
 
 	template<class Type, Size Size>		using Array = std::array<Type, Size>;
+	template<class Type>				using Stack = std::stack<Type>;
 	template<class Type>				using Vector = std::vector<Type>;
 	template<class Type>				using List = std::list<Type>;
 	template<class Key, class Value>	using Map = std::map<Key, Value>;

@@ -276,6 +276,21 @@ namespace Nu
 		public:
 			inline Command& operator = (const Command&) = delete;
 		};
+		class InstanceCreationCommand:
+			public Command
+		{
+		protected:
+			const Reference<Instance> instance;
+		public:
+			inline InstanceCreationCommand() = delete;
+			inline InstanceCreationCommand(const Reference<InstanceCreationCommand>& this_, const Reference<Instance>& instance_);
+			inline InstanceCreationCommand(const InstanceCreationCommand&) = delete;
+			virtual ~InstanceCreationCommand() override = default;
+		public:
+			inline InstanceCreationCommand& operator = (const InstanceCreationCommand&) = delete;
+		public:
+			inline Reference<Instance> GetInstance() const;
+		};
 		class Instance:
 			public Marker,
 			public Unit
@@ -346,6 +361,7 @@ namespace Nu
 			inline static Reference<Name> ExtractName(Data& data_, It& it_, const Reference<Scope>& scope_, const Reference<ParenthoodManager>& parenthoodManager_);
 		protected:
 			bool isMarkerSkipped;
+			Map<Reference<Scope>, It*> currentPosition;
 			// Map<Reference<Scope>, Reference<Stack<Reference<Declaration>>>> allPendingDeclarations;
 		public: // TODO: make private
 			Reference<Schema> globalNoneSchema;
@@ -353,6 +369,7 @@ namespace Nu
 			Reference<Keyword> globalKeywordSchema;
 			Reference<Keyword> globalKeywordAlgorithm;
 			Reference<Keyword> globalKeywordBody;
+			Reference<Keyword> globalKeywordMake;
 		public:
 			const Reference<ParenthoodManager> parenthoodManager = Make<ParenthoodManager>();
 		public:
@@ -387,8 +404,10 @@ namespace Nu
 			inline Reference<Body> ExtractBodyDeclaration(Data& data_, It& it_, const Reference<Algorithm>& algorithm_, const Reference<Schema>& schema_);
 			inline Reference<Body> ParseBody(Data& data_, It& it_, const Reference<Algorithm>& algorithm_, const Reference<Schema>& schema_);
 			// Instance
-			inline Reference<Instance> ExtractInstanceDeclaration(Data& data_, It& it_, const Reference<Body>& body_);
-			inline Reference<Instance> ParseInstance(Data& data_, It& it_, const Reference<Body>& body_);
+			// inline Reference<Instance> ExtractInstanceDeclaration(Data& data_, It& it_, const Reference<Body>& body_);
+			// inline Reference<Instance> ParseInstance(Data& data_, It& it_, const Reference<Body>& body_);
+			inline Reference<InstanceCreationCommand> ExtractInstanceCreationCommand(Data& data_, It& it_, const Reference<Body>& body_);
+			inline Reference<InstanceCreationCommand> ParseInstanceCreationCommand(Data& data_, It& it_, const Reference<Body>& body_);
 			// other
 			inline void Preparse(const Reference<Root>& root_);
 			inline void Preparse(const Reference<Space>& space_);
@@ -702,6 +721,21 @@ inline Nu::Parsing3::Body::Body(const Reference<Body>& this_, const Markers& mar
 inline Nu::Parsing3::Command::Command(const Reference<Command>& this_):
 	Marker(this_)
 {
+}
+
+#pragma endregion
+
+#pragma region InstanceCreationCommand
+
+inline Nu::Parsing3::InstanceCreationCommand::InstanceCreationCommand(const Reference<InstanceCreationCommand>& this_, const Reference<Instance>& instance_):
+	Command(this_),
+	instance(instance_)
+{
+}
+
+inline Nu::Reference<Nu::Parsing3::Instance> Nu::Parsing3::InstanceCreationCommand::GetInstance() const
+{
+	return instance;
 }
 
 #pragma endregion
@@ -1119,6 +1153,7 @@ inline Nu::Parsing3::Parser::Parser(const Reference<Parser>& this_):
 	globalKeywordSchema		= Make<Keyword>(Keyword::Value::Schema);
 	globalKeywordAlgorithm	= Make<Keyword>(Keyword::Value::Algorithm);
 	globalKeywordBody		= Make<Keyword>(Keyword::Value::Body);
+	globalKeywordMake		= Make<Keyword>(Keyword::Value::Make);
 	
 	globalNoneSchema		= Make<Schema>();
 }
@@ -1424,6 +1459,7 @@ inline Nu::Reference<Nu::Parsing3::Algorithm> Nu::Parsing3::Parser::ExtractAlgor
 				{
 					schema_->Add(braceAlgorithm);
 					parenthoodManager->SetParent(braceAlgorithm, schema_);
+					parenthoodManager->SetParent(body, braceAlgorithm);
 
 					parenthoodManager->SetBody(body, braceAlgorithm);
 
@@ -1450,11 +1486,18 @@ inline Nu::Reference<Nu::Parsing3::Algorithm> Nu::Parsing3::Parser::ParseAlgorit
 
 	if (auto algorithm = ParseMarker<Algorithm>(data_, it_))
 	{
-		// TODO: Parse(algorithm);
-		if (auto body = ParseBody(data_, it_, algorithm, schema_))
+		auto body = parenthoodManager->GetBody(algorithm);
+
+		if (body)
 		{
-			// TODO: Parse(body)
+			Parse(body);
 		}
+
+		// // TODO: Parse(algorithm);
+		// if (auto body = ParseBody(data_, it_, algorithm, schema_))
+		// {
+		// 	// TODO: Parse(body)
+		// }
 
 		return algorithm;
 	}
@@ -1523,6 +1566,8 @@ inline Nu::Reference<Nu::Parsing3::Body> Nu::Parsing3::Parser::ParseBody(Data& d
 	return nullptr;
 }
 
+/*
+TODO: replace with command
 inline Nu::Reference<Nu::Parsing3::Instance> Nu::Parsing3::Parser::ExtractInstanceDeclaration(Data& data_, It& it_, const Reference<Body>& body_)
 {
 	auto o = it_;
@@ -1568,6 +1613,54 @@ inline Nu::Reference<Nu::Parsing3::Instance> Nu::Parsing3::Parser::ParseInstance
 	it_ = o;
 	return nullptr;
 }
+*/
+inline Nu::Reference<Nu::Parsing3::InstanceCreationCommand> Nu::Parsing3::Parser::ExtractInstanceCreationCommand(Data& data_, It& it_, const Reference<Body>& body_)
+{
+	auto o = it_;
+
+	if (auto keyword = ParseKeyword(data_, it_, body_, Keyword::Value::Make))
+	{
+		if (auto schema = ParseAnySchema(data_, it_, body_))
+		{
+			auto instance = Make<Instance>(schema);
+			{
+				parenthoodManager->SetParent(instance, body_);
+			}
+			auto command = Make<InstanceCreationCommand>(instance);
+
+			return command;
+		}
+		else
+		{
+			throw Exception(); // TODO
+		}
+	}
+
+	it_ = o;
+	return nullptr;
+}
+inline Nu::Reference<Nu::Parsing3::InstanceCreationCommand> Nu::Parsing3::Parser::ParseInstanceCreationCommand(Data& data_, It& it_, const Reference<Body>& body_)
+{
+	auto o = it_;
+
+	if (auto instanceCreationCommand = ParseMarker<InstanceCreationCommand>(data_, it_))
+	{
+		return instanceCreationCommand;
+	}
+	else if (auto instanceCreationCommand = ExtractInstanceCreationCommand(data_, it_, body_))
+	{
+		MarkersContainer::Markers markers;
+		{
+			markers.push_back(instanceCreationCommand);
+		}
+
+		throw MarkersReplaceRequired(o, it_, markers);
+	}
+
+	it_ = o;
+	return nullptr;
+}
+
 
 inline void Nu::Parsing3::Parser::Preparse(const Reference<Root>& root_)
 {
@@ -1678,27 +1771,38 @@ inline void Nu::Parsing3::Parser::Preparse(const Reference<Body>& body_)
 	auto &markers = body_->GetMarkers();
 	auto it = markers.begin();
 
-	/*TODO:
 	while (it != markers.end())
 	{
 		try
 		{
 			auto o = it;
-	
-			++it;
+
+			if (auto declaration = ExtractDeclaration(markers, it, body_))
+			{
+				MarkersContainer::Markers markers;
+				{
+					markers.push_back(declaration);
+				}
+
+				throw MarkersReplaceRequired(o, it, markers);
+			}
+			else
+			{
+				++it;
+			}
 		}
 		catch (MarkersReplaceRequired replace)
 		{
 			auto i = markers.erase(replace.begin, replace.end);
-	
+
 			for (auto &m : replace.markers)
 			{
 				i = markers.insert(i, m);
 			}
-	
+
 			it = markers.begin();
 		}
-	}*/
+	}
 }
 
 inline void Nu::Parsing3::Parser::Parse(const Reference<Root>& root_)
@@ -1715,6 +1819,8 @@ inline void Nu::Parsing3::Parser::Parse(const Reference<Root>& root_)
 
 	auto &markers = root_->GetMarkers();
 	auto it = markers.begin();
+
+	currentPosition[root_] = &it;
 
 	while (it != markers.end())
 	{
@@ -1844,6 +1950,8 @@ inline void Nu::Parsing3::Parser::Parse(const Reference<Root>& root_)
 			it = skip.end;
 		}
 	}
+
+	currentPosition.erase(root_);
 }
 inline void Nu::Parsing3::Parser::Parse(const Reference<Space>& space_)
 {
@@ -2040,9 +2148,71 @@ inline void Nu::Parsing3::Parser::Parse(const Reference<Body>& body_)
 			{
 				// do nothing
 			}
-			else if (auto instance = ParseInstance(markers, it, body_))
+			else if (auto instanceCreationCommand = ParseInstanceCreationCommand(markers, it, body_))
 			{
-				// TODO
+				// do nothing
+			}
+			else if (auto declaration = ParseDeclaration(markers, it, body_))
+			{
+				/*
+				TODO: replace with command
+				if (auto instance = ParseInstance(markers, it, body_))
+				{
+					auto declarationName = declaration->GetName();
+					auto value = parenthoodManager->GetValue(declarationName);
+
+					if (value)
+					{
+						if (instance != value)
+						{
+							throw Exception(); // TODO
+						}
+					}
+					else
+					{
+						parenthoodManager->SetValue(declarationName, instance);
+					}
+				}
+				else
+				*/
+				if (auto keyword = ParseKeyword(markers, it, body_))
+				{
+					auto declarationName = declaration->GetName();
+					auto value = parenthoodManager->GetValue(declarationName);
+
+					if (value)
+					{
+						if (keyword != value)
+						{
+							throw Exception(); // TODO
+						}
+					}
+					else
+					{
+						parenthoodManager->SetValue(declarationName, keyword);
+					}
+				}
+				else if (auto unit = ParseNameUnit(markers, it, body_))
+				{
+					auto declarationName = declaration->GetName();
+					auto value = parenthoodManager->GetValue(declarationName);
+
+					if (value)
+					{
+						if (unit != value)
+						{
+							throw Exception(); // TODO
+						}
+					}
+					else
+					{
+						parenthoodManager->SetValue(declarationName, unit);
+					}
+				}
+				else
+				{
+					throw Exception(); // TODO
+				}
 			}
 			else
 			{
@@ -2096,6 +2266,12 @@ inline Nu::Parsing3::Parser::Output Nu::Parsing3::Parser::Parse(const Input& inp
 		auto bodyName = root->Add(bodyNameValue);
 
 		parenthoodManager->SetValue(bodyName, globalKeywordBody);
+	}
+	auto makeNameValue = Name::Value("make");
+	{
+		auto makeName = root->Add(makeNameValue);
+
+		parenthoodManager->SetValue(makeName, globalKeywordMake);
 	}
 
 	auto noneNameValue = Name::Value("none");
