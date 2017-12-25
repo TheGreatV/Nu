@@ -238,28 +238,28 @@ namespace Testing
 		public:
 			/* Requirement: TODO
 			 */
-			TEST_METHOD(ParenthoodManager_Empty)
+			/*TEST_METHOD(ParenthoodManager_Empty)
 			{
 				auto parenthoodManager = Make<ParenthoodManager>();
-				auto scope1 = Make<Parsing3::Scope>();
+				auto space1 = Make<Parsing3::Space>();
 
-				auto parent = parenthoodManager->GetParent(scope1);
+				auto parent = parenthoodManager->GetParent(space1);
 
 				Assert::IsTrue(
 					parent == nullptr,
 					L"Verify that parent is nullptr"
 				);
 
-				auto names = parenthoodManager->GetNames(scope1);
+				auto names = parenthoodManager->GetNames(space1);
 
 				Assert::IsTrue(
 					names.empty(),
 					L"Verify that names is empty"
 				);
-			}
+			}*/
 			/* Requirement: TODO
 			 */
-			TEST_METHOD(ParenthoodManager_UnitParent)
+			/*TEST_METHOD(ParenthoodManager_UnitParent)
 			{
 				auto parenthoodManager = Make<ParenthoodManager>();
 				auto scope1 = Make<Parsing3::Scope>();
@@ -274,20 +274,20 @@ namespace Testing
 					parent == scope1,
 					L"Verify that unit1 parent equal to scope1"
 				);
-			}
+			}*/
 			/* Requirement: TODO
 			 */
-			TEST_METHOD(ParenthoodManager_SingleScopeNames)
+			/*TEST_METHOD(ParenthoodManager_SingleScopeNames)
 			{
 				auto parenthoodManager = Make<ParenthoodManager>();
-				auto scope1 = Make<Parsing3::Scope>();
+				auto space1 = Make<Parsing3::Space>();
 
 				auto nameValue1 = "a";
-				auto name1 = scope1->Add(nameValue1);
+				auto name1 = space1->Add(nameValue1);
 				auto nameValue2 = "b";
-				auto name2 = scope1->Add(nameValue2);
+				auto name2 = space1->Add(nameValue2);
 				{
-					auto names = parenthoodManager->GetNames(scope1);
+					auto names = parenthoodManager->GetNames(space1);
 
 					Assert::IsTrue(
 						names[nameValue1][0] == name1,
@@ -300,9 +300,9 @@ namespace Testing
 				}
 
 				auto nameValue3 = nameValue1;
-				auto name3 = scope1->Add(nameValue3);
+				auto name3 = space1->Add(nameValue3);
 				{
-					auto names = parenthoodManager->GetNames(scope1);
+					auto names = parenthoodManager->GetNames(space1);
 
 					Assert::IsTrue(
 						names[nameValue1][1] == name1,
@@ -313,26 +313,26 @@ namespace Testing
 						L"Verify that name is as expected"
 					);
 				}
-			}
+			}*/
 			/* Requirement: TODO
 			 */
-			TEST_METHOD(ParenthoodManager_TwoNestedScopeNames)
+			/*TEST_METHOD(ParenthoodManager_TwoNestedScopeNames)
 			{
 				auto parenthoodManager = Make<ParenthoodManager>();
-				auto scope1 = Make<Parsing3::Scope>();
-				auto scope2 = Make<Parsing3::Scope>();
+				auto space1 = Make<Parsing3::Space>();
+				auto space2 = Make<Parsing3::Space>();
 				{
-					parenthoodManager->SetParent(scope2, scope1);
+					parenthoodManager->SetParent(space2, space1);
 				}
 
 				auto nameValue1 = "a";
-				auto name1 = scope1->Add(nameValue1);
+				auto name1 = space1->Add(nameValue1);
 				auto nameValue2 = "b";
-				auto name2 = scope1->Add(nameValue2);
+				auto name2 = space1->Add(nameValue2);
 				auto nameValue3 = nameValue1;
-				auto name3 = scope1->Add(nameValue3);
+				auto name3 = space1->Add(nameValue3);
 				{
-					auto names = parenthoodManager->GetNames(scope2);
+					auto names = parenthoodManager->GetNames(space2);
 
 					Assert::IsTrue(
 						names[nameValue1][1] == name1,
@@ -349,11 +349,11 @@ namespace Testing
 				}
 
 				auto nameValue4 = nameValue3;
-				auto name4 = scope1->Add(nameValue4);
+				auto name4 = space1->Add(nameValue4);
 				auto nameValue5 = nameValue2;
-				auto name5 = scope1->Add(nameValue5);
+				auto name5 = space1->Add(nameValue5);
 				{
-					auto names = parenthoodManager->GetNames(scope2);
+					auto names = parenthoodManager->GetNames(space2);
 
 					Assert::IsTrue(
 						names[nameValue1][2] == name1,
@@ -376,15 +376,325 @@ namespace Testing
 						L"Verify that name is as expected"
 					);
 				}
+			}*/
+		public: // experimental
+			TEST_METHOD(ParenthoodManager_Merge_Empty)
+			{
+				Scope::Names a;
+				Scope::Names b;
+
+				auto c = ParenthoodManager::Merge(a, b);
+
+				Assert::IsTrue(
+					c.empty() == true,
+					L"Verify that result is empty"
+				);
+			}
+			TEST_METHOD(ParenthoodManager_Merge_EmptyOverlapping)
+			{
+				auto n1 = Make<Name>();
+
+				Scope::Names a;
+				{
+					a["x"][0] = n1;
+				}
+				Scope::Names b;
+
+				auto c = ParenthoodManager::Merge(a, b);
+
+				Assert::IsTrue(
+					c.size() == 1,
+					L""
+				);
+
+				Assert::IsTrue(
+					c["x"].size() == 1,
+					L""
+				);
+
+				Assert::IsTrue(
+					c["x"][0] == n1,
+					L""
+				);
+			}
+			TEST_METHOD(ParenthoodManager_Merge_EmptyPrevious)
+			{
+				auto n1 = Make<Name>();
+
+				Scope::Names a;
+				Scope::Names b;
+				{
+					b["x"][0] = n1;
+				}
+
+				auto c = ParenthoodManager::Merge(a, b);
+
+				Assert::IsTrue(
+					c.size() == 1,
+					L""
+				);
+
+				Assert::IsTrue(
+					c["x"].size() == 1,
+					L""
+				);
+
+				Assert::IsTrue(
+					c["x"][0] == n1,
+					L""
+				);
+			}
+			TEST_METHOD(ParenthoodManager_Merge_NotIntersecting)
+			{
+				auto n1 = Make<Name>();
+				auto n2 = Make<Name>();
+
+				Scope::Names a;
+				{
+					a["x"][0] = n1;
+				}
+				Scope::Names b;
+				{
+					b["y"][0] = n2;
+				}
+
+				auto c = ParenthoodManager::Merge(a, b);
+
+				Assert::IsTrue(
+					c.size() == 2,
+					L""
+				);
+
+				Assert::IsTrue(
+					c["x"].size() == 1,
+					L""
+				);
+				Assert::IsTrue(
+					c["x"][0] == n1,
+					L""
+				);
+
+
+				Assert::IsTrue(
+					c["y"].size() == 1,
+					L""
+				);
+				Assert::IsTrue(
+					c["y"][0] == n2,
+					L""
+				);
+			}
+			TEST_METHOD(ParenthoodManager_Merge_Intersecting)
+			{
+				auto n1 = Make<Name>();
+				auto n2 = Make<Name>();
+
+				Scope::Names a;
+				{
+					a["x"][0] = n1;
+				}
+				Scope::Names b;
+				{
+					b["x"][0] = n2;
+				}
+
+				auto c = ParenthoodManager::Merge(a, b);
+
+				Assert::IsTrue(
+					c.size() == 1,
+					L""
+				);
+
+				Assert::IsTrue(
+					c["x"].size() == 2,
+					L""
+				);
+				Assert::IsTrue(
+					c["x"][0] == n2,
+					L""
+				);
+				Assert::IsTrue(
+					c["x"][1] == n1,
+					L""
+				);
+			}
+		public:
+			TEST_METHOD(ParenthoodManager_GetNames2_Empty)
+			{
+				auto parenthoodManager = Make<ParenthoodManager>();
+				
+				auto space1 = Make<Space>();
+				auto &markers1 = space1->GetMarkers();
+
+				auto names = parenthoodManager->GetNames2(space1, space1, markers1.end());
+
+				Assert::IsTrue(
+					names.empty() == true,
+					L""
+				);
+			}
+			TEST_METHOD(ParenthoodManager_GetNames2_SingleNameInsideSingleSpace)
+			{
+				auto parenthoodManager = Make<ParenthoodManager>();
+				
+				auto space1 = Make<Space>();
+				auto &markers1 = space1->GetMarkers();
+
+				Name::Value nameValue1 = "x";
+				auto name1 = space1->Add(nameValue1);
+				{
+					markers1.push_back(Make<Declaration>(nameValue1, name1));
+				}
+
+				auto names = parenthoodManager->GetNames2(space1, space1, markers1.begin());
+				
+				Assert::IsTrue(
+					names.size() == 1,
+					L""
+				);
+				Assert::IsTrue(
+					names["x"].size() == 1,
+					L""
+				);
+				Assert::IsTrue(
+					names["x"][0] == name1,
+					L""
+				);
+			}
+			TEST_METHOD(ParenthoodManager_GetNames2_SingleNameInsideBodyGetBeforeDeclaration)
+			{
+				auto parenthoodManager = Make<ParenthoodManager>();
+				
+				auto body1 = Make<Body>();
+				auto &markers1 = body1->GetMarkers();
+
+				Name::Value nameValue1 = "x";
+				auto name1 = body1->Add(nameValue1);
+				{
+					markers1.push_back(Make<Declaration>(nameValue1, name1));
+				}
+
+				auto names = parenthoodManager->GetNames2(body1, body1, markers1.begin());
+				
+				Assert::IsTrue(
+					names.size() == 0,
+					L""
+				);
+			}
+			TEST_METHOD(ParenthoodManager_GetNames2_SingleNameInsideBodyGetAfterDeclaration)
+			{
+				auto parenthoodManager = Make<ParenthoodManager>();
+				
+				auto body1 = Make<Body>();
+				auto &markers1 = body1->GetMarkers();
+
+				Name::Value nameValue1 = "x";
+				auto name1 = body1->Add(nameValue1);
+				{
+					markers1.push_back(Make<Declaration>(nameValue1, name1));
+				}
+
+				auto names = parenthoodManager->GetNames2(body1, body1, markers1.end());
+				
+				Assert::IsTrue(
+					names.size() == 1,
+					L""
+				);
+				Assert::IsTrue(
+					names[nameValue1].size() == 1,
+					L""
+				);
+				Assert::IsTrue(
+					names[nameValue1][0] == name1,
+					L""
+				);
+			}
+			TEST_METHOD(ParenthoodManager_GetNames2_SeveralNameInsideBodyGetAfterDeclarations)
+			{
+				auto parenthoodManager = Make<ParenthoodManager>();
+				
+				auto body1 = Make<Body>();
+				auto &markers1 = body1->GetMarkers();
+
+				Name::Value nameValue1 = "x";
+				auto name1 = body1->Add(nameValue1);
+				{
+					markers1.push_back(Make<Declaration>(nameValue1, name1));
+				}
+
+				Name::Value nameValue2 = "y";
+				auto name2 = body1->Add(nameValue2);
+				{
+					markers1.push_back(Make<Declaration>(nameValue2, name2));
+				}
+
+				auto names = parenthoodManager->GetNames2(body1, body1, markers1.end());
+				
+				Assert::IsTrue(
+					names.size() == 2,
+					L""
+				);
+				Assert::IsTrue(
+					names[nameValue1].size() == 1,
+					L""
+				);
+				Assert::IsTrue(
+					names[nameValue1][0] == name1,
+					L""
+				);
+				Assert::IsTrue(
+					names[nameValue2].size() == 1,
+					L""
+				);
+				Assert::IsTrue(
+					names[nameValue2][0] == name2,
+					L""
+				);
+			}
+			TEST_METHOD(ParenthoodManager_GetNames2_SeveralNameInsideBodyGetBetweenDeclarations)
+			{
+				auto parenthoodManager = Make<ParenthoodManager>();
+				
+				auto body1 = Make<Body>();
+				auto &markers1 = body1->GetMarkers();
+
+				Name::Value nameValue1 = "x";
+				auto name1 = body1->Add(nameValue1);
+				{
+					markers1.push_back(Make<Declaration>(nameValue1, name1));
+				}
+
+				auto itDelimiter = markers1.insert(markers1.end(), Make<Delimiter>());
+
+				Name::Value nameValue2 = "y";
+				auto name2 = body1->Add(nameValue2);
+				{
+					markers1.push_back(Make<Declaration>(nameValue2, name2));
+				}
+
+				auto names = parenthoodManager->GetNames2(body1, body1, itDelimiter);
+				
+				Assert::IsTrue(
+					names.size() == 1,
+					L""
+				);
+				Assert::IsTrue(
+					names[nameValue1].size() == 1,
+					L""
+				);
+				Assert::IsTrue(
+					names[nameValue1][0] == name1,
+					L""
+				);
 			}
 		public:
 			TEST_METHOD(Parser_ExtractName_SingleName)
 			{
-				auto scope = Make<Parsing3::Scope>();
+				auto space = Make<Parsing3::Space>();
 				auto parenthoodManager = Make<Parsing3::ParenthoodManager>();
 
 				auto nameValue1 = "a";
-				auto name1 = scope->Add(nameValue1);
+				auto name1 = space->Add(nameValue1);
 
 				MarkersContainer::Markers markers;
 				{
@@ -392,7 +702,7 @@ namespace Testing
 				};
 				auto it = markers.begin();
 
-				auto output = Parser::ExtractName(markers, it, scope, parenthoodManager);
+				auto output = Parser::ExtractName(markers, it, space, parenthoodManager);
 
 				Assert::IsTrue(
 					output == name1,
@@ -401,11 +711,11 @@ namespace Testing
 			}
 			TEST_METHOD(Parser_ExtractName_SingleNameWithTailText)
 			{
-				auto scope = Make<Parsing3::Scope>();
+				auto space = Make<Parsing3::Space>();
 				auto parenthoodManager = Make<Parsing3::ParenthoodManager>();
 
 				auto nameValue1 = "a";
-				auto name1 = scope->Add(nameValue1);
+				auto name1 = space->Add(nameValue1);
 
 				MarkersContainer::Markers markers;
 				{
@@ -414,7 +724,7 @@ namespace Testing
 				};
 				auto it = markers.begin();
 
-				auto output = Parser::ExtractName(markers, it, scope, parenthoodManager);
+				auto output = Parser::ExtractName(markers, it, space, parenthoodManager);
 
 				Assert::IsTrue(
 					output == name1,
@@ -423,14 +733,14 @@ namespace Testing
 			}
 			TEST_METHOD(Parser_ExtractName_MultipleNames)
 			{
-				auto scope = Make<Parsing3::Scope>();
+				auto space = Make<Parsing3::Space>();
 				auto parenthoodManager = Make<Parsing3::ParenthoodManager>();
 
 				auto nameValue1 = "a";
-				auto name1 = scope->Add(nameValue1);
+				auto name1 = space->Add(nameValue1);
 				
 				auto nameValue2 = "b";
-				auto name2 = scope->Add(nameValue2);
+				auto name2 = space->Add(nameValue2);
 
 				MarkersContainer::Markers markers1;
 				{
@@ -438,7 +748,7 @@ namespace Testing
 				};
 				auto it1 = markers1.begin();
 
-				auto output1 = Parser::ExtractName(markers1, it1, scope, parenthoodManager);
+				auto output1 = Parser::ExtractName(markers1, it1, space, parenthoodManager);
 
 				Assert::IsTrue(
 					output1 == name1,
@@ -451,7 +761,7 @@ namespace Testing
 				};
 				auto it2 = markers2.begin();
 
-				auto output2 = Parser::ExtractName(markers2, it2, scope, parenthoodManager);
+				auto output2 = Parser::ExtractName(markers2, it2, space, parenthoodManager);
 
 				Assert::IsTrue(
 					output2 == name2,
@@ -460,12 +770,12 @@ namespace Testing
 			}
 			TEST_METHOD(Parser_ExtractName_SingleDuplicatedName)
 			{
-				auto scope = Make<Parsing3::Scope>();
+				auto space = Make<Parsing3::Space>();
 				auto parenthoodManager = Make<Parsing3::ParenthoodManager>();
 
 				auto nameValue1 = "a";
-				auto name1 = scope->Add(nameValue1);
-				auto name2 = scope->Add(nameValue1);
+				auto name1 = space->Add(nameValue1);
+				auto name2 = space->Add(nameValue1);
 
 				MarkersContainer::Markers markers1;
 				{
@@ -473,7 +783,7 @@ namespace Testing
 				};
 				auto it1 = markers1.begin();
 
-				auto output1 = Parser::ExtractName(markers1, it1, scope, parenthoodManager);
+				auto output1 = Parser::ExtractName(markers1, it1, space, parenthoodManager);
 
 				Assert::IsTrue(
 					output1 == name2,
@@ -487,7 +797,7 @@ namespace Testing
 				};
 				auto it2 = markers2.begin();
 
-				auto output2 = Parser::ExtractName(markers2, it2, scope, parenthoodManager);
+				auto output2 = Parser::ExtractName(markers2, it2, space, parenthoodManager);
 
 				Assert::IsTrue(
 					output2 == name1,
@@ -497,15 +807,15 @@ namespace Testing
 			TEST_METHOD(Parser_ExtractName_SeveralScopes)
 			{
 				auto parenthoodManager = Make<Parsing3::ParenthoodManager>();
-				auto scope1 = Make<Parsing3::Scope>();
-				auto scope2 = Make<Parsing3::Scope>();
+				auto space1 = Make<Parsing3::Space>();
+				auto space2 = Make<Parsing3::Space>();
 				{
-					parenthoodManager->SetParent(scope2, scope1);
+					parenthoodManager->SetParent(space2, space1);
 				}
 
 				auto nameValue1 = "a";
-				auto name1 = scope1->Add(nameValue1);
-				auto name2 = scope2->Add(nameValue1);
+				auto name1 = space1->Add(nameValue1);
+				auto name2 = space2->Add(nameValue1);
 
 				MarkersContainer::Markers markers1;
 				{
@@ -513,7 +823,7 @@ namespace Testing
 				};
 				auto it1 = markers1.begin();
 
-				auto output1 = Parser::ExtractName(markers1, it1, scope2, parenthoodManager);
+				auto output1 = Parser::ExtractName(markers1, it1, space2, parenthoodManager);
 
 				Assert::IsTrue(
 					output1 == name2,
@@ -527,7 +837,7 @@ namespace Testing
 				};
 				auto it2 = markers2.begin();
 
-				auto output2 = Parser::ExtractName(markers2, it2, scope2, parenthoodManager);
+				auto output2 = Parser::ExtractName(markers2, it2, space2, parenthoodManager);
 
 				Assert::IsTrue(
 					output2 == name1,
@@ -537,12 +847,12 @@ namespace Testing
 			TEST_METHOD(Parser_ExtractName_LongName)
 			{
 				auto parenthoodManager = Make<Parsing3::ParenthoodManager>();
-				auto scope = Make<Parsing3::Scope>();
+				auto space = Make<Parsing3::Space>();
 
 				auto nameValue1 = "ab";
-				auto name1 = scope->Add(nameValue1);
+				auto name1 = space->Add(nameValue1);
 				auto nameValue2 = "a";
-				auto name2 = scope->Add(nameValue2);
+				auto name2 = space->Add(nameValue2);
 
 				MarkersContainer::Markers markers1;
 				{
@@ -550,7 +860,7 @@ namespace Testing
 				};
 				auto it1 = markers1.begin();
 
-				auto output1 = Parser::ExtractName(markers1, it1, scope, parenthoodManager);
+				auto output1 = Parser::ExtractName(markers1, it1, space, parenthoodManager);
 
 				Assert::IsTrue(
 					output1 == name1,
@@ -563,7 +873,7 @@ namespace Testing
 				};
 				auto it2 = markers2.begin();
 
-				auto output2 = Parser::ExtractName(markers2, it2, scope, parenthoodManager);
+				auto output2 = Parser::ExtractName(markers2, it2, space, parenthoodManager);
 
 				Assert::IsTrue(
 					output2 == name2,
@@ -573,10 +883,10 @@ namespace Testing
 			TEST_METHOD(Parser_ExtractName_NameDivision)
 			{
 				auto parenthoodManager = Make<Parsing3::ParenthoodManager>();
-				auto scope = Make<Parsing3::Scope>();
+				auto space = Make<Parsing3::Space>();
 
 				auto nameValue1 = "a";
-				auto name1 = scope->Add(nameValue1);
+				auto name1 = space->Add(nameValue1);
 
 				MarkersContainer::Markers markers;
 				{
@@ -586,7 +896,7 @@ namespace Testing
 
 				try
 				{
-					Parser::ExtractName(markers, it, scope, parenthoodManager);
+					Parser::ExtractName(markers, it, space, parenthoodManager);
 
 					Assert::Fail(L"Exception fail");
 				}
@@ -608,17 +918,17 @@ namespace Testing
 			{
 				auto parenthoodManager = Make<Parsing3::ParenthoodManager>();
 
-				auto scope1 = Make<Parsing3::Scope>();
+				auto space1 = Make<Parsing3::Space>();
 				auto nameValue1 = "a";
-				auto name1 = scope1->Add(nameValue1);
+				auto name1 = space1->Add(nameValue1);
 
-				auto scope2 = Make<Parsing3::Scope>();
+				auto space2 = Make<Parsing3::Space>();
 				{
-					parenthoodManager->SetParent(scope2, scope1);
-					parenthoodManager->SetValue(name1, scope2);
+					parenthoodManager->SetParent(space2, space1);
+					parenthoodManager->SetValue(name1, space2);
 				}
 				auto nameValue2 = "b";
-				auto name2 = scope2->Add(nameValue2);
+				auto name2 = space2->Add(nameValue2);
 
 				MarkersContainer::Markers markers;
 				{
@@ -630,7 +940,7 @@ namespace Testing
 
 				try
 				{
-					Parser::ExtractName(markers, it, scope1, parenthoodManager);
+					Parser::ExtractName(markers, it, space1, parenthoodManager);
 
 					Assert::Fail(L"Exception fail");
 				}
@@ -660,19 +970,19 @@ namespace Testing
 
 				auto parenthoodManager = Make<Parsing3::ParenthoodManager>();
 				
-				auto scope1 = Make<Parsing3::Scope>();
+				auto space1 = Make<Parsing3::Space>();
 				auto nameValue1 = "a";
-				auto name1 = scope1->Add(nameValue1);
+				auto name1 = space1->Add(nameValue1);
 
-				auto scope2 = Make<Parsing3::Scope>();
+				auto space2 = Make<Parsing3::Space>();
 				{
-					parenthoodManager->SetParent(scope2, scope1);
-					parenthoodManager->SetValue(name1, scope2);
+					parenthoodManager->SetParent(space2, space1);
+					parenthoodManager->SetValue(name1, space2);
 				}
 				auto nameValue2 = "b";
-				auto name2 = scope2->Add(nameValue2);
+				auto name2 = space2->Add(nameValue2);
 
-				auto output = Parser::ExtractName(markers, it, scope1, parenthoodManager);
+				auto output = Parser::ExtractName(markers, it, space1, parenthoodManager);
 
 				Assert::IsTrue(
 					output == name2,
@@ -692,19 +1002,19 @@ namespace Testing
 
 				auto parenthoodManager = Make<Parsing3::ParenthoodManager>();
 				
-				auto scope1 = Make<Parsing3::Scope>();
+				auto space1 = Make<Parsing3::Space>();
 				auto nameValue1 = "a";
-				auto name1 = scope1->Add(nameValue1);
+				auto name1 = space1->Add(nameValue1);
 
-				auto scope2 = Make<Parsing3::Scope>();
+				auto space2 = Make<Parsing3::Space>();
 				{
-					parenthoodManager->SetParent(scope2, scope1);
-					parenthoodManager->SetValue(name1, scope2);
+					parenthoodManager->SetParent(space2, space1);
+					parenthoodManager->SetValue(name1, space2);
 				}
 				auto nameValue2 = "b";
-				auto name2 = scope2->Add(nameValue2);
+				auto name2 = space2->Add(nameValue2);
 
-				auto output = Parser::ExtractName(markers, it, scope1, parenthoodManager);
+				auto output = Parser::ExtractName(markers, it, space1, parenthoodManager);
 
 				Assert::IsTrue(
 					output == name2,
@@ -715,9 +1025,9 @@ namespace Testing
 			{
 				auto parenthoodManager = Make<Parsing3::ParenthoodManager>();
 
-				auto scope = Make<Parsing3::Scope>();
+				auto space = Make<Parsing3::Space>();
 				auto nameValue1 = "a";
-				auto name1 = scope->Add(nameValue1);
+				auto name1 = space->Add(nameValue1);
 
 				MarkersContainer::Markers markers;
 				{
@@ -729,7 +1039,7 @@ namespace Testing
 
 				try
 				{
-					Parser::ExtractName(markers, it, scope, parenthoodManager);
+					Parser::ExtractName(markers, it, space, parenthoodManager);
 
 					Assert::Fail(L"Exception fail");
 				}
@@ -2322,6 +2632,210 @@ namespace Testing
 					L"Verify that keyword value is \"space\""
 				);
 			}
+			TEST_METHOD(Parser_Parse_BodyContent_CreateUnnamedInstance)
+			{
+				auto parser = Make<Parser>();
+
+				auto input = Make<Lexing2::Container>();
+				{
+					Lexing2::Container::Tokens bodyContent;
+					{
+						// bodyContent.push_back(Make<Lexing2::Text>("x"));
+						// bodyContent.push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+						bodyContent.push_back(Make<Lexing2::Text>("make"));
+						bodyContent.push_back(Make<Lexing2::Text>("none"));
+					}
+
+					Lexing2::Container::Tokens schemaContent;
+					{
+						schemaContent.push_back(Make<Lexing2::Text>("algorithm"));
+						schemaContent.push_back(Make<Lexing2::Text>("none"));
+						schemaContent.push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Round, Lexing2::Group::BraceType::Round));
+						schemaContent.push_back(Make<Lexing2::Text>("body"));
+						schemaContent.push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure, bodyContent));
+					}
+
+					// input->GetTokens().push_back(Make<Lexing2::Text>("X"));
+					// input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+					input->GetTokens().push_back(Make<Lexing2::Text>("schema"));
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure, schemaContent));
+				}
+
+				auto output = parser->Parse(input);
+				auto &markers = output->GetMarkers();
+				auto &names = output->GetNames();
+
+				auto schema = UpCast<Parsing3::Schema>(markers.front());
+				auto &algorithms = schema->GetAlgorithms();
+				auto algorithm = algorithms[0];
+				auto braceAlgorithm = UpCast<Parsing3::BraceAlgorithm>(algorithm);
+				auto body = parser->parenthoodManager->GetBody(braceAlgorithm);
+				auto bodyMarkers = body->GetMarkers();
+
+				Assert::IsTrue(
+					bodyMarkers.size() == 1,
+					L"Verify that there is 1 marker"
+				);
+
+				auto instanceCreationCommand = UpCast<InstanceCreationCommand>(bodyMarkers.front());
+
+				Assert::IsTrue(
+					instanceCreationCommand != nullptr,
+					L"Verify that marker is InstanceCreationCommand"
+				);
+
+				auto instanceSchema = instanceCreationCommand->GetInstance()->GetSchema();
+
+				Assert::IsTrue(
+					instanceSchema == parser->globalNoneSchema,
+					L"Verify that instance schema is \"none\""
+				);
+			}
+			TEST_METHOD(Parser_Parse_BodyContent_CreateNamedInstance)
+			{
+				auto parser = Make<Parser>();
+
+				auto input = Make<Lexing2::Container>();
+				{
+					Lexing2::Container::Tokens bodyContent;
+					{
+						bodyContent.push_back(Make<Lexing2::Text>("x"));
+						bodyContent.push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+						bodyContent.push_back(Make<Lexing2::Text>("make"));
+						bodyContent.push_back(Make<Lexing2::Text>("none"));
+					}
+
+					Lexing2::Container::Tokens schemaContent;
+					{
+						schemaContent.push_back(Make<Lexing2::Text>("algorithm"));
+						schemaContent.push_back(Make<Lexing2::Text>("none"));
+						schemaContent.push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Round, Lexing2::Group::BraceType::Round));
+						schemaContent.push_back(Make<Lexing2::Text>("body"));
+						schemaContent.push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure, bodyContent));
+					}
+
+					// input->GetTokens().push_back(Make<Lexing2::Text>("X"));
+					// input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+					input->GetTokens().push_back(Make<Lexing2::Text>("schema"));
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure, schemaContent));
+				}
+
+				auto output = parser->Parse(input);
+				auto &markers = output->GetMarkers();
+				auto &names = output->GetNames();
+
+				auto schema = UpCast<Parsing3::Schema>(markers.front());
+				auto &algorithms = schema->GetAlgorithms();
+				auto algorithm = algorithms[0];
+				auto braceAlgorithm = UpCast<Parsing3::BraceAlgorithm>(algorithm);
+				auto body = parser->parenthoodManager->GetBody(braceAlgorithm);
+				auto bodyMarkers = body->GetMarkers();
+				auto bodyNames = body->GetNames(); // parser->parenthoodManager->GetNames2(body, body, bodyMarkers.end());
+
+				Assert::IsTrue(
+					bodyNames.size() == 1,
+					L"Verify that there is 1 name"
+				);
+
+				auto nameIt = bodyNames.find("x");
+
+				Assert::IsTrue(
+					nameIt != bodyNames.end(),
+					L"Verify that there is name \"x\""
+				);
+
+				auto levels = (*nameIt).second;
+				auto levelsIt = levels.find(0);
+
+				Assert::IsTrue(
+					levelsIt != levels.end(),
+					L"Verify that there is level 0"
+				);
+
+				auto name = (*levelsIt).second;
+				auto value = parser->parenthoodManager->GetValue(name);
+				auto instance = UpCast<Instance>(value);
+
+				Assert::IsTrue(
+					instance != nullptr,
+					L"Verify that value is Instance"
+				);
+			}
+			TEST_METHOD(Parser_Parse_BodyContent_AlgorithmCallNoResultNoArguments)
+			{
+				auto parser = Make<Parser>();
+
+				auto input = Make<Lexing2::Container>();
+				{
+					Lexing2::Container::Tokens bodyContent;
+					{
+						bodyContent.push_back(Make<Lexing2::Text>("x"));
+						bodyContent.push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+						bodyContent.push_back(Make<Lexing2::Text>("make"));
+						bodyContent.push_back(Make<Lexing2::Text>("X"));
+						bodyContent.push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Semicolon));
+						
+						bodyContent.push_back(Make<Lexing2::Text>("x"));
+						bodyContent.push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Round, Lexing2::Group::BraceType::Round));
+						bodyContent.push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Semicolon));
+					}
+
+					Lexing2::Container::Tokens schemaContent;
+					{
+						schemaContent.push_back(Make<Lexing2::Text>("algorithm"));
+						schemaContent.push_back(Make<Lexing2::Text>("none"));
+						schemaContent.push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Round, Lexing2::Group::BraceType::Round));
+						schemaContent.push_back(Make<Lexing2::Text>("body"));
+						schemaContent.push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure, bodyContent));
+					}
+
+					input->GetTokens().push_back(Make<Lexing2::Text>("X"));
+					input->GetTokens().push_back(Make<Lexing2::Special>(Lexing2::Special::Value::Colon));
+					input->GetTokens().push_back(Make<Lexing2::Text>("schema"));
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure, schemaContent));
+				}
+
+				auto output = parser->Parse(input);
+				auto &markers = output->GetMarkers();
+				auto &names = output->GetNames();
+
+				/*auto schema = UpCast<Parsing3::Schema>(markers.front());
+				auto &algorithms = schema->GetAlgorithms();
+				auto algorithm = algorithms[0];
+				auto braceAlgorithm = UpCast<Parsing3::BraceAlgorithm>(algorithm);
+				auto body = parser->parenthoodManager->GetBody(braceAlgorithm);
+				auto bodyMarkers = body->GetMarkers();
+				auto bodyNames = body->GetNames(); // parser->parenthoodManager->GetNames2(body, body, bodyMarkers.end());
+
+				Assert::IsTrue(
+					bodyNames.size() == 1,
+					L"Verify that there is 1 name"
+				);
+
+				auto nameIt = bodyNames.find("x");
+
+				Assert::IsTrue(
+					nameIt != bodyNames.end(),
+					L"Verify that there is name \"x\""
+				);
+
+				auto levels = (*nameIt).second;
+				auto levelsIt = levels.find(0);
+
+				Assert::IsTrue(
+					levelsIt != levels.end(),
+					L"Verify that there is level 0"
+				);
+
+				auto name = (*levelsIt).second;
+				auto value = parser->parenthoodManager->GetValue(name);
+				auto instance = UpCast<Instance>(value);
+
+				Assert::IsTrue(
+					instance != nullptr,
+					L"Verify that value is Instance"
+				);*/
+			}
 
 			TEST_METHOD(Parser_Test)
 			{
@@ -2348,46 +2862,27 @@ namespace Testing
 				}
 
 				auto output = parser->Parse(input);
-				// auto &markers = output->GetMarkers();
+				auto &markers = output->GetMarkers();
 				// auto &names = output->GetNames();
 
-				/*auto schema = UpCast<Parsing3::Schema>(parser->parenthoodManager->GetValue(names["X"][0]));
+				auto schema = UpCast<Parsing3::Schema>(markers.front());
 				auto &algorithms = schema->GetAlgorithms();
-
-				Assert::IsTrue(
-					algorithms.size() == 1,
-					L"Verify that there is exactly 1 algorithm"
-				);
-
 				auto algorithm = algorithms[0];
-
-				auto resultSchema = UpCast<Parsing3::Schema>(parser->parenthoodManager->GetValue(names["A"][0]));
-
-				Assert::IsTrue(
-					algorithm->GetResult() == resultSchema,
-					L"Verify that algorithm result is as expected"
-				);
-
 				auto braceAlgorithm = UpCast<Parsing3::BraceAlgorithm>(algorithm);
+				auto algorithmBody = parser->parenthoodManager->GetBody(braceAlgorithm);
+				auto algorithmBodyMarkers = algorithmBody->GetMarkers();
 
 				Assert::IsTrue(
-					braceAlgorithm != nullptr,
-					L"Verify that algorithm is Brace Algorithm"
+					algorithmBodyMarkers.size() == 1,
+					L"Verify that body size is 1"
 				);
 
-				Assert::IsTrue(
-					braceAlgorithm->GetOpening() == Parsing3::BraceAlgorithm::BraceType::Round,
-					L"Verify that algorithm opening is Round"
-				);
-				Assert::IsTrue(
-					braceAlgorithm->GetClosing() == Parsing3::BraceAlgorithm::BraceType::Round,
-					L"Verify that algorithm closing is Round"
-				);
+				auto instanceCreationCommand = UpCast<Parsing3::InstanceCreationCommand>(algorithmBodyMarkers.front());
 
 				Assert::IsTrue(
-					braceAlgorithm->GetArguments().empty(),
-					L"Verify that algorithm arguments is empty"
-				);*/
+					instanceCreationCommand != nullptr,
+					L"Verify that marker is InstanceCreationCommand"
+				);
 			}
 		};
 

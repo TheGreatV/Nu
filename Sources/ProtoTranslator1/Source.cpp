@@ -9,10 +9,10 @@
 #include <Windows.h>
 
 
-void collectSchemas(const Nu::Reference<Nu::Parsing3::MarkersContainer>& markersContainer_, Nu::Vector<Nu::Reference<Nu::Parsing3::Schema>>& schemas_);
-void collectSchemas(const Nu::Reference<Nu::Parsing3::Scope>& scope_, Nu::Vector<Nu::Reference<Nu::Parsing3::Schema>>& schemas_);
+void collectSchemas(const Nu::Reference<Nu::Parsing3::MarkersContainer>& markersContainer_, Nu::Vector<Nu::Reference<Nu::Parsing3::Schema>>& schemas_, const Nu::Reference<Nu::Parsing3::Parser>& parser_);
+void collectSchemas(const Nu::Reference<Nu::Parsing3::Scope>& scope_, Nu::Vector<Nu::Reference<Nu::Parsing3::Schema>>& schemas_, const Nu::Reference<Nu::Parsing3::Parser>& parser_);
 
-void collectSchemas(const Nu::Reference<Nu::Parsing3::MarkersContainer>& markersContainer_, Nu::Vector<Nu::Reference<Nu::Parsing3::Schema>>& schemas_)
+void collectSchemas(const Nu::Reference<Nu::Parsing3::MarkersContainer>& markersContainer_, Nu::Vector<Nu::Reference<Nu::Parsing3::Schema>>& schemas_, const Nu::Reference<Nu::Parsing3::Parser>& parser_)
 {
 	auto &markers = markersContainer_->GetMarkers();
 
@@ -30,9 +30,10 @@ void collectSchemas(const Nu::Reference<Nu::Parsing3::MarkersContainer>& markers
 		{
 			add(schema);
 		}
-		else if (auto declaration = Nu::UpCast<Nu::Parsing3::Markers::Declaration>(marker))
+		else if (auto declaration = Nu::UpCast<Nu::Parsing3::Declaration>(marker))
 		{
-			auto unit = declaration->GetUnit();
+			auto name = declaration->GetName();
+			auto unit = parser_->parenthoodManager->GetValue(name);
 
 			if (auto schema = Nu::UpCast<Nu::Parsing3::Schema>(unit))
 			{
@@ -41,21 +42,21 @@ void collectSchemas(const Nu::Reference<Nu::Parsing3::MarkersContainer>& markers
 
 			if (auto scope = Nu::UpCast<Nu::Parsing3::Scope>(unit))
 			{
-				collectSchemas(scope, schemas_);
+				collectSchemas(scope, schemas_, parser_);
 			}
 		}
 
 		if (auto scope = Nu::UpCast<Nu::Parsing3::Scope>(marker))
 		{
-			collectSchemas(scope, schemas_);
+			collectSchemas(scope, schemas_, parser_);
 		}
 	}
 }
-void collectSchemas(const Nu::Reference<Nu::Parsing3::Scope>& scope_, Nu::Vector<Nu::Reference<Nu::Parsing3::Schema>>& schemas_)
+void collectSchemas(const Nu::Reference<Nu::Parsing3::Scope>& scope_, Nu::Vector<Nu::Reference<Nu::Parsing3::Schema>>& schemas_, const Nu::Reference<Nu::Parsing3::Parser>& parser_)
 {
 	if (auto markersContainer = Nu::UpCast<Nu::Parsing3::MarkersContainer>(scope_))
 	{
-		collectSchemas(markersContainer, schemas_);
+		collectSchemas(markersContainer, schemas_, parser_);
 	}
 }
 
@@ -136,7 +137,22 @@ void wmain(int argc, wchar_t* argv[])
 	auto marker = parser->Parse(tokens);
 
 	Nu::Vector<Nu::Reference<Nu::Parsing3::Schema>> schemas;
-	collectSchemas(Nu::Cast<Nu::Parsing3::Scope>(marker), schemas);
+	collectSchemas(Nu::Cast<Nu::Parsing3::Scope>(marker), schemas, parser);
+
+	Nu::Map<Nu::Reference<Nu::Parsing3::Schema>, Nu::Vector<Nu::Reference<Nu::Parsing3::Algorithm>>> algorithms;
+	{
+		for (auto &schema : schemas)
+		{
+			auto &sourceAlgorithms = algorithms[schema];
+
+			sourceAlgorithms = Nu::Vector<Nu::Reference<Nu::Parsing3::Algorithm>>();
+
+			for (auto &algorithm : schema->GetAlgorithms())
+			{
+				sourceAlgorithms.push_back(algorithm);
+			}
+		}
+	}
 
 	Nu::Map<Nu::Reference<Nu::Parsing3::Schema>, Nu::String> schemasNames;
 	{
@@ -147,6 +163,51 @@ void wmain(int argc, wchar_t* argv[])
 			Nu::String name = "schema #" + std::to_string(i++);
 
 			schemasNames[schema] = name;
+		}
+	}
+
+	schemasNames[parser->globalNoneSchema] = "none";
+
+	Nu::Map<Nu::Reference<Nu::Parsing3::Algorithm>, Nu::String> algorithmsNames;
+	{
+		Nu::Size i = 0;
+
+		for (auto &it : algorithms)
+		{
+			for (auto &algorithm : it.second)
+			{
+				Nu::String name = "algorithm #" + std::to_string(i++);
+
+				algorithmsNames[algorithm] = name;
+			}
+		}
+	}
+
+	Nu::Map<Nu::Reference<Nu::Parsing3::Instance>, Nu::String> instancesNames;
+	{
+		Nu::Size i = 0;
+
+		for (auto &it : algorithms)
+		{
+			auto &schemaAlgorithms = it.second;
+
+			for (auto &algorithm : schemaAlgorithms)
+			{
+				auto body = parser->parenthoodManager->GetBody(algorithm);
+				auto instances = parser->parenthoodManager->GetInstances(body);
+
+				for (auto &instance : instances)
+				{
+					if (instancesNames.find(instance) == instancesNames.end())
+					{
+						instancesNames[instance] = "%" + std::to_string(i++);
+					}
+					else
+					{
+						throw std::exception();
+					}
+				}
+			}
 		}
 	}
 
@@ -171,7 +232,97 @@ void wmain(int argc, wchar_t* argv[])
 		{
 			auto &schemaName = schemasNames[schema];
 
-			output += "\"" + schemaName + "\": {};\n";
+			output += "\"" + schemaName + "\": {\n};\n";
+		}
+
+		output += "\n";
+
+		// algorithms declarations
+		output += "# algorithms declarations\n";
+
+		for (auto &it : algorithms)
+		{
+			if (!it.second.empty())
+			{
+				for (auto &algorithm : it.second)
+				{
+					auto algorithmName = algorithmsNames[algorithm];
+					auto ownerName = schemasNames[it.first];
+					auto resultName = schemasNames[algorithm->GetResult()];
+
+					output += (std::string)"algorithm \"" + resultName + "\" '" + algorithmName + "'();\n";
+				}
+
+				output += "\n";
+			}
+		}
+
+		output += "\n";
+
+		// algorithms definitions
+		output += "# algorithms definitions\n";
+
+		for (auto &it : algorithms)
+		{
+			auto &schema = it.first;
+			auto &schemaAlgorithms = it.second;
+
+			for (auto &algorithm : schemaAlgorithms)
+			{
+				auto algorithmName = algorithmsNames[algorithm];
+				auto body = parser->parenthoodManager->GetBody(algorithm);
+				auto instances = parser->parenthoodManager->GetInstances(body);
+
+				output += "'" + algorithmName + "'(): {\n";
+
+				auto createdInstances = Nu::Set<Nu::Reference<Nu::Parsing3::Instance>>();
+
+				for (auto &marker : body->GetMarkers())
+				{
+					if (auto command = Nu::UpCast<Nu::Parsing3::Command>(marker))
+					{
+						if (auto instanceCreation = Nu::UpCast<Nu::Parsing3::InstanceCreationCommand>(command))
+						{
+							auto instance = instanceCreation->GetInstance();
+							auto instanceName = instancesNames[instance];
+							auto schema = instance->GetSchema();
+							auto schemaName = schemasNames[schema];
+
+							output += "\t" + instanceName + ": create \"" + schemaName + "\";\n";
+
+							createdInstances.insert(instance);
+						}
+						else if (auto ambiguousBraceAlgorithmCall = Nu::UpCast<Nu::Parsing3::AmbiguousBraceAlgorithmCallCommand>(command))
+						{
+							auto possibleTargets = ambiguousBraceAlgorithmCall->GetPossibleTargets();
+
+							if (possibleTargets.size() == 1)
+							{
+								auto algorithm = possibleTargets[0];
+								auto algorithmName = algorithmsNames[algorithm];
+
+								output += "\tcall '" + algorithmName + "'();\n";
+							}
+							else
+							{
+								throw std::exception();
+							}
+						}
+					}
+				}
+
+				for (auto &instance : createdInstances)
+				{
+					auto instanceName = instancesNames[instance];
+
+					output += "\tdelete " + instanceName + ";\n";
+				}
+
+				output += "\treturn;\n";
+				output += "};\n";
+			}
+
+			output += "\n";
 		}
 	}
 

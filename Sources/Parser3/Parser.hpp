@@ -60,23 +60,6 @@ namespace Nu
 		public:
 			inline Value GetValue() const;
 		};
-		class Declaration:
-			public Marker
-		{
-		public:
-			friend Parser;
-		protected:
-			const Reference<Name> name;
-		public:
-			inline Declaration() = delete;
-			inline Declaration(const Reference<Declaration>& this_, const Reference<Name>& name_);
-			inline Declaration(const Declaration&) = delete;
-			virtual ~Declaration() override = default;
-		public:
-			inline Declaration& operator = (const Declaration&) = delete;
-		public:
-			inline Reference<Name> GetName() const;
-		};
 		class Delimiter:
 			public Marker
 		{
@@ -118,6 +101,25 @@ namespace Nu
 			virtual ~Name() override = default;
 		public:
 			inline Name& operator = (const Name&) = delete;
+		};
+		class Declaration:
+			public Marker
+		{
+		public:
+			friend Parser;
+		protected:
+			const Name::Value value;
+			const Reference<Name> name;
+		public:
+			inline Declaration() = delete;
+			inline Declaration(const Reference<Declaration>& this_, const Name::Value& value_, const Reference<Name>& name_);
+			inline Declaration(const Declaration&) = delete;
+			virtual ~Declaration() override = default;
+		public:
+			inline Declaration& operator = (const Declaration&) = delete;
+		public:
+			inline Name::Value GetValue() const;
+			inline Reference<Name> GetName() const;
 		};
 		class Unit:
 			public Entity
@@ -291,6 +293,23 @@ namespace Nu
 		public:
 			inline Reference<Instance> GetInstance() const;
 		};
+		class AmbiguousBraceAlgorithmCallCommand:
+			public Command
+		{
+		public:
+			using PossibleTargets = Vector<Reference<BraceAlgorithm>>;
+		protected:
+			const PossibleTargets possibleTargets;
+		public:
+			inline AmbiguousBraceAlgorithmCallCommand() = delete;
+			inline AmbiguousBraceAlgorithmCallCommand(const Reference<AmbiguousBraceAlgorithmCallCommand>& this_, const PossibleTargets& possibleTargets_);
+			inline AmbiguousBraceAlgorithmCallCommand(const AmbiguousBraceAlgorithmCallCommand&) = delete;
+			virtual ~AmbiguousBraceAlgorithmCallCommand() override = default;
+		public:
+			inline AmbiguousBraceAlgorithmCallCommand& operator = (const AmbiguousBraceAlgorithmCallCommand&) = delete;
+		public:
+			inline PossibleTargets GetPossibleTargets() const;
+		};
 		class Instance:
 			public Marker,
 			public Unit
@@ -304,6 +323,8 @@ namespace Nu
 			virtual ~Instance() override = default;
 		public:
 			inline Instance& operator = (const Instance&) = delete;
+		public:
+			inline Reference<Schema> GetSchema() const;
 		};
 		class Root:
 			public Scope,
@@ -321,9 +342,16 @@ namespace Nu
 			public Entity
 		{
 		protected:
+			using Data = MarkersContainer::Markers;
+			using It = Data::iterator;
+		public: // experimental
+			static inline Scope::Names Merge(const Scope::Names& previous_, const Scope::Names& overlapping_);
+		protected:
 			Map<Reference<Unit>, Reference<Scope>> parenthoodLookup;
 			Map<Reference<Name>, Reference<Unit>> valueLookup;
 			Map<Reference<Algorithm>, Reference<Body>> bodiesLookup;
+			Map<Reference<Body>, Vector<Reference<Instance>>> bodiesInstances;
+			Map<Reference<Schema>, bool> isInterfaceCompleted;
 		public:
 			inline ParenthoodManager() = delete;
 			inline ParenthoodManager(const Reference<ParenthoodManager>& this_);
@@ -334,11 +362,19 @@ namespace Nu
 		public:
 			inline Reference<Scope> GetParent(const Reference<Unit>& unit_) const;
 			inline void SetParent(const Reference<Unit>& unit_, const Reference<Scope>& scope_);
-			inline Scope::Names GetNames(const Reference<Scope>& scope_);
+			inline void SetParent(const Reference<Instance>& instance_, const Reference<Body>& body_);
+			inline Scope::Names GetNames1(const Reference<Scope>& scope_);
 			inline Reference<Unit> GetValue(const Reference<Name>& name_) const;
 			inline void SetValue(const Reference<Name>& name_, const Reference<Unit>& unit_);
 			inline Reference<Body> GetBody(const Reference<Algorithm>& algorithm_);
 			inline void SetBody(const Reference<Body>& body_, const Reference<Algorithm>& algorithm_);
+		public:
+			Map<Reference<Scope>, It*> currentPosition;
+		public: // experimental
+			inline Scope::Names GetNames2(const Reference<Scope>& scope_, const Reference<Scope>& whereScope_, const MarkersContainer::Markers::iterator& whereIt_);
+			inline void SetInterfaceCompleted(const Reference<Schema>& schema_);
+			inline bool IsInterfaceCompleted(const Reference<Schema>& schema_);
+			inline Vector<Reference<Instance>> GetInstances(const Reference<Body>& body_);
 		};
 		class Parser:
 			public Entity
@@ -408,6 +444,9 @@ namespace Nu
 			// inline Reference<Instance> ParseInstance(Data& data_, It& it_, const Reference<Body>& body_);
 			inline Reference<InstanceCreationCommand> ExtractInstanceCreationCommand(Data& data_, It& it_, const Reference<Body>& body_);
 			inline Reference<InstanceCreationCommand> ParseInstanceCreationCommand(Data& data_, It& it_, const Reference<Body>& body_);
+			// Expressions
+			inline Reference<AmbiguousBraceAlgorithmCallCommand> ExtractBraceAlgorithmCall(Data& data_, It& it_, const Reference<Body>& body_);
+			inline Reference<AmbiguousBraceAlgorithmCallCommand> ParseBraceAlgorithmCall(Data& data_, It& it_, const Reference<Body>& body_);
 			// other
 			inline void Preparse(const Reference<Root>& root_);
 			inline void Preparse(const Reference<Space>& space_);
@@ -472,12 +511,17 @@ inline Nu::Parsing3::Token::Value Nu::Parsing3::Token::GetValue() const
 
 #pragma region Declaration
 
-inline Nu::Parsing3::Declaration::Declaration(const Reference<Declaration>& this_, const Reference<Name>& name_):
+inline Nu::Parsing3::Declaration::Declaration(const Reference<Declaration>& this_, const Name::Value& value_, const Reference<Name>& name_):
 	Marker(this_),
+	value(value_),
 	name(name_)
 {
 }
 
+Nu::Parsing3::Name::Value Nu::Parsing3::Declaration::GetValue() const
+{
+	return value;
+}
 inline Nu::Reference<Nu::Parsing3::Name> Nu::Parsing3::Declaration::GetName() const
 {
 	return name;
@@ -740,6 +784,21 @@ inline Nu::Reference<Nu::Parsing3::Instance> Nu::Parsing3::InstanceCreationComma
 
 #pragma endregion
 
+#pragma region AmbiguousBraceAlgorithmCallCommand
+
+inline Nu::Parsing3::AmbiguousBraceAlgorithmCallCommand::AmbiguousBraceAlgorithmCallCommand(const Reference<AmbiguousBraceAlgorithmCallCommand>& this_, const PossibleTargets& possibleTargets_):
+	Command(this_),
+	possibleTargets(possibleTargets_)
+{
+}
+
+inline Nu::Parsing3::AmbiguousBraceAlgorithmCallCommand::PossibleTargets Nu::Parsing3::AmbiguousBraceAlgorithmCallCommand::GetPossibleTargets() const
+{
+	return possibleTargets;
+}
+
+#pragma endregion
+
 #pragma region Instance
 
 inline Nu::Parsing3::Instance::Instance(const Reference<Instance>& this_, const Reference<Schema>& schema_):
@@ -747,6 +806,11 @@ inline Nu::Parsing3::Instance::Instance(const Reference<Instance>& this_, const 
 	Unit(this_),
 	schema(schema_)
 {
+}
+
+Nu::Reference<Nu::Parsing3::Schema> Nu::Parsing3::Instance::GetSchema() const
+{
+	return schema;
 }
 
 #pragma endregion
@@ -762,6 +826,36 @@ inline Nu::Parsing3::Root::Root(const Reference<Root>& this_, const Markers& mar
 #pragma endregion
 
 #pragma region ParenthoodManager
+
+Nu::Parsing3::Scope::Names Nu::Parsing3::ParenthoodManager::Merge(const Scope::Names& previous_, const Scope::Names& overlapping_)
+{
+	auto names = Scope::Names();
+
+	for (auto &i : overlapping_)
+	{
+		auto &value = i.first;
+		auto &levels = i.second;
+
+		names[value] = levels;
+	}
+
+	for (auto &i : previous_)
+	{
+		auto &value = i.first;
+		auto &levels = i.second;
+		auto l = names[value].size();
+
+		for (auto &j : levels)
+		{
+			auto &level = j.first;
+			auto &name = j.second;
+
+			names[value][level + l] = name;
+		}
+	}
+
+	return Move(names);
+}
 
 inline Nu::Parsing3::ParenthoodManager::ParenthoodManager(const Reference<ParenthoodManager>& this_):
 	Entity(this_)
@@ -787,14 +881,52 @@ inline void Nu::Parsing3::ParenthoodManager::SetParent(const Reference<Unit>& un
 {
 	parenthoodLookup[unit_] = scope_;
 }
-inline Nu::Parsing3::Scope::Names Nu::Parsing3::ParenthoodManager::GetNames(const Reference<Scope>& scope_)
+void Nu::Parsing3::ParenthoodManager::SetParent(const Reference<Instance>& instance_, const Reference<Body>& body_)
 {
+	SetParent(Cast<Unit>(instance_), Cast<Scope>(body_));
+
+	bodiesInstances[body_].push_back(instance_);
+}
+inline Nu::Parsing3::Scope::Names Nu::Parsing3::ParenthoodManager::GetNames1(const Reference<Scope>& scope_)
+{
+	auto getNames = [](const Reference<Scope>& scope) -> Scope::Names
+	{
+		if (auto root = UpCast<Root>(scope))
+		{
+			return root->GetNames();
+		}
+		else if (auto space = UpCast<Space>(scope))
+		{
+			return space->GetNames();
+		}
+		else if (auto schema = UpCast<Schema>(scope))
+		{
+			return Scope::Names(); // empty
+		}
+		else if (auto body = UpCast<Body>(scope))
+		{
+			throw NotImplementedException(); // TODO
+		}
+		else if (auto algorithm = UpCast<Algorithm>(scope))
+		{
+			throw NotImplementedException(); // TODO
+		}
+		else if (auto instance = UpCast<Instance>(scope))
+		{
+			throw NotImplementedException(); // TODO
+		}
+		else
+		{
+			throw Exception(); // TODO
+		}
+	};
+
 	auto names = Scope::Names();
 	auto scope = scope_;
 
 	while (scope != nullptr)
 	{
-		auto scopeNames = scope->GetNames();
+		auto scopeNames = getNames(scope);
 
 		for (auto &i : scopeNames)
 		{
@@ -850,6 +982,108 @@ inline void Nu::Parsing3::ParenthoodManager::SetBody(const Reference<Body>& body
 	{
 		throw Exception(); // TODO
 	}
+}
+
+Nu::Parsing3::Scope::Names Nu::Parsing3::ParenthoodManager::GetNames2(const Reference<Scope>& scope_, const Reference<Scope>& whereScope_, const MarkersContainer::Markers::iterator& whereIt_)
+{
+	auto getNames = [&](const Reference<Scope>& scope) -> Scope::Names
+	{
+		if (auto root = UpCast<Root>(scope))
+		{
+			return root->GetNames();
+		}
+		else if (auto space = UpCast<Space>(scope))
+		{
+			return space->GetNames();
+		}
+		else if (auto schema = UpCast<Schema>(scope))
+		{
+			return Scope::Names(); // empty TODO: implement
+		}
+		else if (auto body = UpCast<Body>(scope))
+		{
+			if (whereScope_ == scope_)
+			{
+				Scope::Names names;
+				auto &markers = body->GetMarkers();
+
+				for (auto it = markers.begin(); it != whereIt_; ++it)
+				{
+					auto marker = *it;
+
+					if (auto declaration = UpCast<Declaration>(marker))
+					{
+						auto name = declaration->GetName();
+						auto value = declaration->GetValue();
+
+						auto &levels = names[value];
+						Map<Name::Level, Reference<Name>> newLevels;
+
+						for (auto &i : levels)
+						{
+							auto &level = i.first;
+							auto &name = i.second;
+
+							newLevels[level + 1] = name;
+						}
+
+						newLevels[0] = name;
+						levels = newLevels;
+					}
+				}
+
+				return Move(names);
+
+				// throw NotImplementedException(); // TODO
+			}
+			else
+			{
+				throw NotImplementedException(); // TODO
+			}
+		}
+		else if (auto algorithm = UpCast<Algorithm>(scope))
+		{
+			return Scope::Names(); // empty TODO: implement
+			// throw NotImplementedException();
+		}
+		else if (auto instance = UpCast<Instance>(scope))
+		{
+			throw NotImplementedException(); // TODO
+		}
+		else
+		{
+			throw Exception(); // TODO
+		}
+	};
+
+	auto ownNames = getNames(scope_);
+	auto parent = GetParent(scope_);
+	auto parentNames = parent
+		? GetNames2(parent, whereScope_, whereIt_)
+		: Scope::Names();
+	auto names = Merge(parentNames, ownNames);
+
+	return Move(names);
+
+}
+void Nu::Parsing3::ParenthoodManager::SetInterfaceCompleted(const Reference<Schema>& schema_)
+{
+	isInterfaceCompleted[schema_] = true;
+}
+bool Nu::Parsing3::ParenthoodManager::IsInterfaceCompleted(const Reference<Schema>& schema_)
+{
+	auto it = isInterfaceCompleted.find(schema_);
+
+	if (it != isInterfaceCompleted.end())
+	{
+		return (*it).second;
+	}
+
+	return false;
+}
+Nu::Vector<Nu::Reference<Nu::Parsing3::Instance>> Nu::Parsing3::ParenthoodManager::GetInstances(const Reference<Body>& body_)
+{
+	return bodiesInstances[body_];
 }
 
 #pragma endregion
@@ -973,7 +1207,7 @@ inline Nu::Reference<Nu::Parsing3::Name> Nu::Parsing3::Parser::ExtractName(Data&
 	if (auto text = ParseToken<Lexing2::Text>(data_, it_))
 	{
 		auto value = text->GetValue();
-		auto names = parenthoodManager_->GetNames(scope_);
+		auto names = parenthoodManager_->GetNames2(scope_, scope_, it_); // GetNames(scope_)
 		auto namesByLength = Vector<Name::Value>();
 		{
 			for (auto &i : names)
@@ -1040,7 +1274,7 @@ inline Nu::Reference<Nu::Parsing3::Name> Nu::Parsing3::Parser::ExtractName(Data&
 
 									if (scope)
 									{
-										auto names = parenthoodManager_->GetNames(scope);
+										auto names = parenthoodManager_->GetNames2(scope, scope_, it_); // GetNames(scope)
 										auto namesByLength = Vector<Name::Value>();
 										{
 											for (auto &i : names)
@@ -1285,9 +1519,9 @@ inline Nu::Reference<Nu::Parsing3::Declaration> Nu::Parsing3::Parser::ExtractDec
 			{
 				auto textValue = text->GetValue();
 				auto name = scope_->Add(textValue);
-				auto declarationHeader = Make<Declaration>(name);
+				auto declaration = Make<Declaration>(textValue, name);
 
-				return declarationHeader;
+				return declaration;
 			}
 		}
 	}
@@ -1652,6 +1886,93 @@ inline Nu::Reference<Nu::Parsing3::InstanceCreationCommand> Nu::Parsing3::Parser
 		MarkersContainer::Markers markers;
 		{
 			markers.push_back(instanceCreationCommand);
+		}
+
+		throw MarkersReplaceRequired(o, it_, markers);
+	}
+
+	it_ = o;
+	return nullptr;
+}
+
+Nu::Reference<Nu::Parsing3::AmbiguousBraceAlgorithmCallCommand> Nu::Parsing3::Parser::ExtractBraceAlgorithmCall(Data& data_, It& it_, const Reference<Body>& body_)
+{
+	auto o = it_;
+
+	if (auto unit = ParseNameUnit(data_, it_, body_)) // TODO: replace with ParseInstance
+	{
+		if (auto instance = UpCast<Instance>(unit))
+		{
+			if (auto group = ParseToken<Lexing2::Group>(data_, it_))
+			{
+				// TODO: parse arguments
+
+				auto schema = instance->GetSchema();
+
+				if (parenthoodManager->IsInterfaceCompleted(schema))
+				{
+					auto algorithms = schema->GetAlgorithms();
+
+					auto acceptableAlgorithms = [&]() // get algorithms with 
+					{
+						Vector<Reference<BraceAlgorithm>> acceptableAlgorithms;
+
+						for (auto &algorithm : algorithms)
+						{
+							if (auto braceAlgorithm = UpCast<BraceAlgorithm>(algorithm))
+							{
+								if (braceAlgorithm->GetOpening() == group->GetOpening())
+								{
+									if (braceAlgorithm->GetClosing() == group->GetClosing())
+									{
+										acceptableAlgorithms.push_back(braceAlgorithm);
+									}
+								}
+							}
+						}
+
+						return Move(acceptableAlgorithms);
+					}();
+
+					if (acceptableAlgorithms.size() == 1)
+					{
+						auto call = Make<AmbiguousBraceAlgorithmCallCommand>(acceptableAlgorithms);
+
+						return Move(call);
+					}
+					else
+					{
+						throw NotImplementedException(); // TODO: 
+					}
+				}
+				else
+				{
+					auto j = it_;
+
+					++j;
+
+					throw MarkersSkipRequired(o, j);
+				}
+			}
+		}
+	}
+
+	it_ = o;
+	return nullptr;
+}
+Nu::Reference<Nu::Parsing3::AmbiguousBraceAlgorithmCallCommand> Nu::Parsing3::Parser::ParseBraceAlgorithmCall(Data& data_, It& it_, const Reference<Body>& body_)
+{
+	auto o = it_;
+
+	if (auto call = ParseMarker<AmbiguousBraceAlgorithmCallCommand>(data_, it_))
+	{
+		return call;
+	}
+	else if (auto functionCall = ExtractBraceAlgorithmCall(data_, it_, body_))
+	{
+		MarkersContainer::Markers markers;
+		{
+			markers.push_back(functionCall);
 		}
 
 		throw MarkersReplaceRequired(o, it_, markers);
@@ -2081,8 +2402,11 @@ inline void Nu::Parsing3::Parser::Parse(const Reference<Schema>& schema_)
 {
 	Preparse(schema_);
 
+beginContentParsing:
 	auto &markers = schema_->GetMarkers();
 	auto it = markers.begin();
+
+	bool isGapsDetected = false;
 
 	while (it != markers.end())
 	{
@@ -2112,14 +2436,21 @@ inline void Nu::Parsing3::Parser::Parse(const Reference<Schema>& schema_)
 				i = markers.insert(i, m);
 			}
 
-			it = markers.begin();
+			goto beginContentParsing;
+			// it = markers.begin();
+			// isGapsDetected = true;
 		}
 		catch (MarkersSkipRequired skip)
 		{
 			isMarkerSkipped = true;
-
 			it = skip.end;
+			isGapsDetected = true;
 		}
+	}
+
+	if (!isGapsDetected)
+	{
+		parenthoodManager->SetInterfaceCompleted(schema_);
 	}
 }
 inline void Nu::Parsing3::Parser::Parse(const Reference<Algorithm>& algorithm_)
@@ -2148,34 +2479,27 @@ inline void Nu::Parsing3::Parser::Parse(const Reference<Body>& body_)
 			{
 				// do nothing
 			}
-			else if (auto instanceCreationCommand = ParseInstanceCreationCommand(markers, it, body_))
-			{
-				// do nothing
-			}
 			else if (auto declaration = ParseDeclaration(markers, it, body_))
 			{
-				/*
-				TODO: replace with command
-				if (auto instance = ParseInstance(markers, it, body_))
+				if (auto instanceCreationCommand = ParseInstanceCreationCommand(markers, it, body_))
 				{
 					auto declarationName = declaration->GetName();
 					auto value = parenthoodManager->GetValue(declarationName);
+					auto instane = instanceCreationCommand->GetInstance();
 
 					if (value)
 					{
-						if (instance != value)
+						if (instane != value)
 						{
 							throw Exception(); // TODO
 						}
 					}
 					else
 					{
-						parenthoodManager->SetValue(declarationName, instance);
+						parenthoodManager->SetValue(declarationName, instane);
 					}
 				}
-				else
-				*/
-				if (auto keyword = ParseKeyword(markers, it, body_))
+				else if (auto keyword = ParseKeyword(markers, it, body_)) // should be placed after declaration
 				{
 					auto declarationName = declaration->GetName();
 					auto value = parenthoodManager->GetValue(declarationName);
@@ -2213,6 +2537,14 @@ inline void Nu::Parsing3::Parser::Parse(const Reference<Body>& body_)
 				{
 					throw Exception(); // TODO
 				}
+			}
+			else if (auto instanceCreationCommand = ParseInstanceCreationCommand(markers, it, body_))
+			{
+				// do nothing
+			}
+			else if (auto braceAlgorithmCall = ParseBraceAlgorithmCall(markers, it, body_))
+			{
+				// TODO
 			}
 			else
 			{
