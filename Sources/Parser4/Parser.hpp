@@ -29,15 +29,15 @@ namespace Nu
 	{
 		/*
 		class T:
-			public Entity
+		public Entity
 		{
 		public:
-			inline T() = delete;
-			inline T(const Reference<T>& this_);
-			inline T(const T&) = delete;
-			inline virtual ~T() override = default;
+		inline T() = delete;
+		inline T(const Reference<T>& this_);
+		inline T(const T&) = delete;
+		inline virtual ~T() override = default;
 		public:
-			inline T& operator = (const T&) = delete;
+		inline T& operator = (const T&) = delete;
 		};
 		*/
 
@@ -51,7 +51,7 @@ namespace Nu
 			class Declaration;
 		}
 		class MarkersContainer;
-		
+
 		class Unit;
 		class Keyword;
 		class Scope;
@@ -63,8 +63,15 @@ namespace Nu
 			class Outer;
 			class Root;
 			class Space;
+			class Schema;
 		}
-		
+		class Algorithm;
+		namespace Algorithms
+		{
+			class BraceAlgorithm;
+		}
+		class AlgorithmsContainer;
+
 		class Context;
 		class Parser;
 
@@ -193,8 +200,23 @@ namespace Nu
 			public:
 				inline Reference<Scopes::Space> GetSpace() const;
 			};
+			class SchemaDeclaration:
+				public Marker
+			{
+			protected:
+				const Reference<Scopes::Schema> schema;
+			public:
+				inline SchemaDeclaration() = delete;
+				inline SchemaDeclaration(const Reference<SchemaDeclaration>& this_, const Reference<Scopes::Schema>& schema_);
+				inline SchemaDeclaration(const SchemaDeclaration&) = delete;
+				inline virtual ~SchemaDeclaration() override = default;
+			public:
+				inline SchemaDeclaration& operator = (const SchemaDeclaration&) = delete;
+			public:
+				inline Reference<Scopes::Schema> GetSchema() const;
+			};
 		}
-		
+
 		class Unit:
 			public Entity
 		{
@@ -212,8 +234,10 @@ namespace Nu
 		public:
 			enum class Value
 			{
-				None,
+				None, // not in use
 				Space,
+				Schema,
+				Algorithm,
 			};
 		protected:
 			const Value value;
@@ -226,6 +250,15 @@ namespace Nu
 			inline Keyword& operator = (const Keyword&) = delete;
 		public:
 			inline Value GetValue() const;
+		};
+		class AlgorithmsContainer
+		{
+		public:
+			inline AlgorithmsContainer() = default;
+			inline AlgorithmsContainer(const AlgorithmsContainer&) = delete;
+			inline ~AlgorithmsContainer() = default;
+		public:
+			inline AlgorithmsContainer& operator = (const AlgorithmsContainer&) = delete;
 		};
 		class Scope:
 			public Unit,
@@ -269,7 +302,11 @@ namespace Nu
 			{
 			protected:
 				const Reference<Parsing4::Markers::Declaration> declarationSpace = Make<Parsing4::Markers::Declaration>("space");
+				const Reference<Parsing4::Markers::Declaration> declarationSchema = Make<Parsing4::Markers::Declaration>("schema");
+				const Reference<Parsing4::Markers::Declaration> declarationAlgorithm = Make<Parsing4::Markers::Declaration>("algorithm");
 				const Reference<Keyword> keywordSpace = Make<Keyword>(Keyword::Value::Space);
+				const Reference<Keyword> keywordSchema = Make<Keyword>(Keyword::Value::Schema);
+				const Reference<Keyword> keywordAlgorithm = Make<Keyword>(Keyword::Value::Algorithm);
 			public:
 				inline Outer() = delete;
 				inline Outer(const Reference<Outer>& this_);
@@ -292,7 +329,8 @@ namespace Nu
 				inline Root& operator = (const Root&) = delete;
 			};
 			class Space:
-				public SpaceLikeScope
+				public SpaceLikeScope,
+				public AlgorithmsContainer
 			{
 			public:
 				inline Space() = delete;
@@ -302,8 +340,53 @@ namespace Nu
 			public:
 				inline Space& operator = (const Space&) = delete;
 			};
+			class Schema:
+				public Scope
+			{
+			public:
+				inline Schema() = delete;
+				inline Schema(const Reference<Schema>& this_, const Markers& markers_ = Markers());
+				inline Schema(const Schema&) = delete;
+				inline virtual ~Schema() override = default;
+			public:
+				inline Schema& operator = (const Schema&) = delete;
+			};
 		}
-		
+		class Algorithm:
+			public Unit,
+			public MarkersContainer
+		{
+		public:
+			inline Algorithm() = delete;
+			inline Algorithm(const Reference<Algorithm>& this_, const Markers& markers_ = Markers());
+			inline Algorithm(const Algorithm&) = delete;
+			inline virtual ~Algorithm() override = default;
+		public:
+			inline Algorithm& operator = (const Algorithm&) = delete;
+		};
+		namespace Algorithms
+		{
+			class BraceAlgorithm:
+				public Algorithm
+			{
+			public:
+				using BraceType = Lexing2::Group::BraceType;
+			protected:
+				const BraceType opening;
+				const BraceType closing;
+			public:
+				inline BraceAlgorithm() = delete;
+				inline BraceAlgorithm(const Reference<BraceAlgorithm>& this_, const BraceType& opening_, const BraceType& closing_, const Markers& markers_ = Markers());
+				inline BraceAlgorithm(const BraceAlgorithm&) = delete;
+				inline virtual ~BraceAlgorithm() override = default;
+			public:
+				inline BraceAlgorithm& operator = (const BraceAlgorithm&) = delete;
+			public:
+				inline BraceType GetOpening() const;
+				inline BraceType GetClosing() const;
+			};
+		}
+
 		class Parser:
 			public Entity
 		{
@@ -330,27 +413,32 @@ namespace Nu
 			inline Parser& operator = (const Parser&) = delete;
 		protected:
 			// utilities
-			inline void SkipUntilDeclaration(Data& data_, It& it_, const It& o_);
+			inline void																SkipUntilDeclaration(Data& data_, It& it_, const It& o_);
 			// basic objects
-			inline Reference<Marker> ParseMarker(Data& data_, It& it_);
-			template<class T> inline Reference<T> ParseMarker(Data& data_, It& it_);
-			template<class T> inline Reference<T> ParseToken(Data& data_, It& it_);
-			template<Lexing2::Special::Value T> inline Reference<Lexing2::Special> ParseSpecialToken(Data& data_, It& it_);
+			inline Reference<Marker>												ParseMarker(Data& data_, It& it_);
+			template<class T> inline Reference<T>									ParseMarker(Data& data_, It& it_);
+			template<class T> inline Reference<T>									ParseToken(Data& data_, It& it_);
+			template<Lexing2::Special::Value T> inline Reference<Lexing2::Special>	ParseSpecialToken(Data& data_, It& it_);
 			// names
-			inline Size CountDots(Data& data_, It& it_);
-			inline Reference<Markers::Declaration> ProcessExtractingChildsChain(Data& data_, It& it_, const Reference<Markers::Declaration>& parent_);
-			inline Reference<Markers::Name> ExtractName(Data& data_, It& it_, const Reference<Scope>& scope_);
-			inline Reference<Markers::Name> ParseName(Data& data_, It& it_, const Reference<Scope>& scope_);
-			template<class T> inline Reference<T> ParseNamed(Data& data_, It& it_, const Reference<Scope>& scope_);
+			inline Size																CountDots(Data& data_, It& it_);
+			inline Reference<Markers::Declaration>									ProcessExtractingChildsChain(Data& data_, It& it_, const Reference<Markers::Declaration>& parent_);
+			inline Reference<Markers::Name>											ExtractName(Data& data_, It& it_, const Reference<Scope>& scope_);
+			inline Reference<Markers::Name>											ParseName(Data& data_, It& it_, const Reference<Scope>& scope_);
+			template<class T> inline Reference<T>									ParseNamed(Data& data_, It& it_, const Reference<Scope>& scope_);
 			// declarations
-			inline Reference<Scopes::Space> ParseSpace(Data& data_, It& it_, const Reference<Scope>& scope_);
-			inline Reference<Scopes::Space> ExtractSpaceDeclaration(Data& data_, It& it_, const Reference<Scope>& scope_);
+			inline Reference<Scopes::Space>											ParseSpace(Data& data_, It& it_, const Reference<Scope>& scope_);
+			inline Reference<Scopes::Space>											ExtractSpaceDeclaration(Data& data_, It& it_, const Reference<Scope>& scope_);
+			inline Reference<Markers::SpaceDeclaration>								ParseSpaceDeclaration(Data& data_, It& it_, const Reference<Scope>& scope_);
+			inline Reference<Scopes::Schema>										ParseSchema(Data& data_, It& it_, const Reference<Scope>& scope_);
+			inline Reference<Scopes::Schema>										ExtractSchemaDeclaration(Data& data_, It& it_, const Reference<Scope>& scope_);
+			inline Reference<Markers::SchemaDeclaration>							ParseSchemaDeclaration(Data& data_, It& it_, const Reference<Scope>& scope_);
 			// keyword
-			inline Reference<Keyword> ParseKeyword(Data& data_, It& it_, const Reference<Scope>& scope_, const Keyword::Value& value_ = Keyword::Value::None);
+			inline Reference<Keyword>												ParseKeyword(Data& data_, It& it_, const Reference<Scope>& scope_, const Keyword::Value& value_ = Keyword::Value::None);
 			// content of scopes
-			inline void ParseContent(const Reference<Scopes::SpaceLikeScope>& space_);
+			inline void																ParseContent(const Reference<Scopes::SpaceLikeScope>& space_);
+			inline void																ParseContent(const Reference<Scopes::Schema>& schema_);
 		public:
-			inline Output Parse(const Input& input_);
+			inline Output															Parse(const Input& input_);
 		};
 		class Parser::MarkersReplaceRequired
 		{
@@ -527,6 +615,21 @@ Nu::Reference<Nu::Parsing4::Scopes::Space> Nu::Parsing4::Markers::SpaceDeclarati
 
 #pragma endregion
 
+#pragma region SchemaDeclaration
+
+Nu::Parsing4::Markers::SchemaDeclaration::SchemaDeclaration(const Reference<SchemaDeclaration>& this_, const Reference<Scopes::Schema>& schema_):
+	Marker(this_),
+	schema(schema_)
+{
+}
+
+Nu::Reference<Nu::Parsing4::Scopes::Schema> Nu::Parsing4::Markers::SchemaDeclaration::GetSchema() const
+{
+	return schema;
+}
+
+#pragma endregion
+
 #pragma endregion
 
 #pragma region MarkersContainer
@@ -603,11 +706,15 @@ Nu::Parsing4::Scopes::Outer::Outer(const Reference<Outer>& this_):
 	ThroughAccessScope(this_)
 {
 	markers.push_back(declarationSpace);
+	markers.push_back(declarationSchema);
+	markers.push_back(declarationAlgorithm);
 }
 
 void Nu::Parsing4::Scopes::Outer::BindToContext(const Reference<Context>& context_)
 {
 	context_->SetValue(declarationSpace, keywordSpace);
+	context_->SetValue(declarationSchema, keywordSchema);
+	context_->SetValue(declarationAlgorithm, keywordAlgorithm);
 }
 
 #pragma endregion
@@ -624,11 +731,59 @@ Nu::Parsing4::Scopes::Root::Root(const Reference<Root>& this_, const Markers& ma
 #pragma region Space
 
 Nu::Parsing4::Scopes::Space::Space(const Reference<Space>& this_, const Markers& markers_):
-	SpaceLikeScope(this_, markers_)
+	SpaceLikeScope(this_, markers_),
+	AlgorithmsContainer()
 {
 }
 
 #pragma endregion
+
+#pragma region Schema
+
+Nu::Parsing4::Scopes::Schema::Schema(const Reference<Schema>& this_, const Markers& markers_):
+	Scope(this_, markers_)
+{
+}
+
+#pragma endregion
+
+#pragma endregion
+
+#pragma region Algorithm
+
+Nu::Parsing4::Algorithm::Algorithm(const Reference<Algorithm>& this_, const Markers& markers_):
+	Unit(this_),
+	MarkersContainer(markers_)
+{
+}
+
+#pragma endregion
+
+#pragma region Algorithms
+
+#pragma region BraceAlgorithm
+
+Nu::Parsing4::Algorithms::BraceAlgorithm::BraceAlgorithm(const Reference<BraceAlgorithm>& this_, const BraceType& opening_, const BraceType& closing_, const Markers& markers_):
+	Algorithm(this_, markers_),
+	opening(opening_),
+	closing(closing_)
+{
+}
+
+Nu::Parsing4::Algorithms::BraceAlgorithm::BraceType Nu::Parsing4::Algorithms::BraceAlgorithm::GetOpening() const
+{
+	return opening;
+}
+Nu::Parsing4::Algorithms::BraceAlgorithm::BraceType Nu::Parsing4::Algorithms::BraceAlgorithm::GetClosing() const
+{
+	return closing;
+}
+
+#pragma endregion
+
+#pragma endregion
+
+#pragma region AlgorithmsContainer
 
 #pragma endregion
 
@@ -1203,26 +1358,15 @@ Nu::Reference<Nu::Parsing4::Scopes::Space> Nu::Parsing4::Parser::ParseSpace(Data
 {
 	auto o = it_;
 
-	if (auto spaceDeclaration = ParseMarker<Markers::SpaceDeclaration>(data_, it_))
+	if (auto named = ParseNamed<Scopes::Space>(data_, it_, scope_))
 	{
-		auto space = spaceDeclaration->GetSpace();
+		return named;
+	}
+	else if (auto declaration = ParseSpaceDeclaration(data_, it_, scope_))
+	{
+		auto space = declaration->GetSpace();
 
 		return space;
-	}
-	else if (auto namedSpace = ParseNamed<Scopes::Space>(data_, it_, scope_))
-	{
-		return namedSpace;
-	}
-	else if (auto extracted = ExtractSpaceDeclaration(data_, it_, scope_))
-	{
-		auto newSpaceDeclaration = Make<Markers::SpaceDeclaration>(extracted);
-
-		MarkersContainer::Markers markers;
-		{
-			markers.push_back(newSpaceDeclaration);
-		}
-
-		throw MarkersReplaceRequired(o, it_, markers);
 	}
 
 	it_ = o;
@@ -1250,6 +1394,97 @@ Nu::Reference<Nu::Parsing4::Scopes::Space> Nu::Parsing4::Parser::ExtractSpaceDec
 				return Move(space);
 			}
 		}
+	}
+
+	it_ = o;
+	return nullptr;
+}
+Nu::Reference<Nu::Parsing4::Markers::SpaceDeclaration> Nu::Parsing4::Parser::ParseSpaceDeclaration(Data& data_, It& it_, const Reference<Scope>& scope_)
+{
+	auto o = it_;
+
+	if (auto spaceDeclaration = ParseMarker<Markers::SpaceDeclaration>(data_, it_))
+	{
+		return spaceDeclaration;
+	}
+	else if (auto extracted = ExtractSpaceDeclaration(data_, it_, scope_))
+	{
+		auto newSpaceDeclaration = Make<Markers::SpaceDeclaration>(extracted);
+
+		MarkersContainer::Markers markers;
+		{
+			markers.push_back(newSpaceDeclaration);
+		}
+
+		throw MarkersReplaceRequired(o, it_, markers);
+	}
+
+	it_ = o;
+	return nullptr;
+}
+Nu::Reference<Nu::Parsing4::Scopes::Schema> Nu::Parsing4::Parser::ParseSchema(Data& data_, It& it_, const Reference<Scope>& scope_)
+{
+	auto o = it_;
+
+	if (auto named = ParseNamed<Scopes::Schema>(data_, it_, scope_))
+	{
+		return named;
+	}
+	else if (auto declaration = ParseSchemaDeclaration(data_, it_, scope_))
+	{
+		auto schema = declaration->GetSchema();
+
+		return schema;
+	}
+
+	it_ = o;
+	return nullptr;
+}
+Nu::Reference<Nu::Parsing4::Scopes::Schema> Nu::Parsing4::Parser::ExtractSchemaDeclaration(Data& data_, It& it_, const Reference<Scope>& scope_)
+{
+	auto o = it_;
+
+	if (auto keyword = ParseKeyword(data_, it_, scope_, Keyword::Value::Schema))
+	{
+		if (auto group = ParseMarker<Markers::Group>(data_, it_))
+		{
+			if (group->GetOpening() == Markers::Group::BraceType::Figure && group->GetClosing() == Markers::Group::BraceType::Figure)
+			{
+				auto &markers = group->GetMarkers();
+				auto schema = Make<Scopes::Schema>(Move(markers));
+				{
+					context->SetParent(schema, scope_);
+					context->AddToPendingToParse(schema);
+
+					context->isChanged = true;
+				}
+
+				return Move(schema);
+			}
+		}
+	}
+
+	it_ = o;
+	return nullptr;
+}
+Nu::Reference<Nu::Parsing4::Markers::SchemaDeclaration> Nu::Parsing4::Parser::ParseSchemaDeclaration(Data& data_, It& it_, const Reference<Scope>& scope_)
+{
+	auto o = it_;
+
+	if (auto schemaDeclaration = ParseMarker<Markers::SchemaDeclaration>(data_, it_))
+	{
+		return schemaDeclaration;
+	}
+	else if (auto extracted = ExtractSchemaDeclaration(data_, it_, scope_))
+	{
+		auto newSchemaDeclaration = Make<Markers::SchemaDeclaration>(extracted);
+
+		MarkersContainer::Markers markers;
+		{
+			markers.push_back(newSchemaDeclaration);
+		}
+
+		throw MarkersReplaceRequired(o, it_, markers);
 	}
 
 	it_ = o;
@@ -1290,7 +1525,11 @@ void Nu::Parsing4::Parser::ParseContent(const Reference<Scopes::SpaceLikeScope>&
 			{
 				// do nothing
 			}
-			else if (auto space = ParseSpace(markers, it, space_))
+			else if (auto spaceDeclaration = ParseSpaceDeclaration(markers, it, space_))
+			{
+				// do nothing
+			}
+			else if (auto schemaDeclaration = ParseSchemaDeclaration(markers, it, space_))
 			{
 				// do nothing
 			}
@@ -1303,6 +1542,10 @@ void Nu::Parsing4::Parser::ParseContent(const Reference<Scopes::SpaceLikeScope>&
 				else if (auto space = ParseSpace(markers, it, space_))
 				{
 					context->SetValue(declaration, space);
+				}
+				else if (auto schema = ParseSchema(markers, it, space_))
+				{
+					context->SetValue(declaration, schema);
 				}
 				else if (auto keyword = ParseKeyword(markers, it, space_))
 				{
@@ -1348,6 +1591,59 @@ void Nu::Parsing4::Parser::ParseContent(const Reference<Scopes::SpaceLikeScope>&
 		context->RemoveFromPendingToParse(space_);
 	}
 }
+void Nu::Parsing4::Parser::ParseContent(const Reference<Scopes::Schema>& schema_)
+{
+	auto &markers = schema_->GetMarkers();
+	auto it = markers.begin();
+
+	context->SetPosition(schema_, &it);
+
+	bool isChanged = false;
+	bool isSkipped = false;
+
+	while (it != markers.end())
+	{
+		try
+		{
+			if (auto delimiter = ParseMarker<Markers::Delimiter>(markers, it))
+			{
+				// do nothing
+			}
+			else
+			{
+				throw Exception(); // TODO
+			}
+		}
+		catch (MarkersReplaceRequired replace)
+		{
+			isChanged = true;
+			context->isChanged = true;
+
+			auto i = markers.erase(replace.begin, replace.end);
+
+			for (auto &m : replace.markers)
+			{
+				i = markers.insert(i, m);
+			}
+
+			it = markers.begin();
+		}
+		catch (MarkersSkipRequired skip)
+		{
+			isSkipped = true;
+			context->isSkipped = true;
+
+			it = skip.end;
+		}
+	}
+
+	context->ResetPosition(schema_);
+
+	if (!isSkipped)
+	{
+		context->RemoveFromPendingToParse(schema_);
+	}
+}
 
 Nu::Parsing4::Parser::Output Nu::Parsing4::Parser::Parse(const Input& input_)
 {
@@ -1386,6 +1682,10 @@ Nu::Parsing4::Parser::Output Nu::Parsing4::Parser::Parse(const Input& input_)
 				else if (auto space = UpCast<Scopes::Space>(scope))
 				{
 					ParseContent(space);
+				}
+				else if (auto schema = UpCast<Scopes::Schema>(scope))
+				{
+					ParseContent(schema);
 				}
 				else
 				{
