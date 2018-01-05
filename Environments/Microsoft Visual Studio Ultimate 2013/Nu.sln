@@ -32,6 +32,7 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Testing", "Projects\Testing\Testing.vcxproj", "{1B335559-BD24-49B7-A315-5F5E37FABFF4}"
 	ProjectSection(ProjectDependencies) = postProject
 		{18838B67-CCB3-4F76-ADAF-C62D88489857} = {18838B67-CCB3-4F76-ADAF-C62D88489857}
+		{DDAFDA7F-8A02-47B2-993B-BD8BF71416DB} = {DDAFDA7F-8A02-47B2-993B-BD8BF71416DB}
 		{C29A50B6-E8BE-42AC-99AC-9240F721E476} = {C29A50B6-E8BE-42AC-99AC-9240F721E476}
 		{D70663E6-FD45-4354-81D1-DCF179C33AEE} = {D70663E6-FD45-4354-81D1-DCF179C33AEE}
 	EndProjectSection
@@ -51,6 +52,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ProtoTranslator1", "Project
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Translator2", "Projects\Translator2\Translator2.vcxproj", "{5354C106-5E20-4F04-8C71-90BB3FA06BD6}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Parser4", "Projects\Parser4\Parser4.vcxproj", "{DDAFDA7F-8A02-47B2-993B-BD8BF71416DB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -98,6 +101,10 @@ Global
 		{5354C106-5E20-4F04-8C71-90BB3FA06BD6}.Debug|Win32.Build.0 = Debug|Win32
 		{5354C106-5E20-4F04-8C71-90BB3FA06BD6}.Release|Win32.ActiveCfg = Release|Win32
 		{5354C106-5E20-4F04-8C71-90BB3FA06BD6}.Release|Win32.Build.0 = Release|Win32
+		{DDAFDA7F-8A02-47B2-993B-BD8BF71416DB}.Debug|Win32.ActiveCfg = Debug|Win32
+		{DDAFDA7F-8A02-47B2-993B-BD8BF71416DB}.Debug|Win32.Build.0 = Debug|Win32
+		{DDAFDA7F-8A02-47B2-993B-BD8BF71416DB}.Release|Win32.ActiveCfg = Release|Win32
+		{DDAFDA7F-8A02-47B2-993B-BD8BF71416DB}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
