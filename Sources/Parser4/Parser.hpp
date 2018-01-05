@@ -58,9 +58,11 @@ namespace Nu
 		namespace Scopes
 		{
 			class ThroughAccessScope;
+			class SpaceLikeScope;
 
 			class Outer;
 			class Root;
+			class Space;
 		}
 		
 		class Context;
@@ -176,6 +178,21 @@ namespace Nu
 			public:
 				inline Reference<Unit> GetUnit() const;
 			};
+			class SpaceDeclaration:
+				public Marker
+			{
+			protected:
+				const Reference<Scopes::Space> space;
+			public:
+				inline SpaceDeclaration() = delete;
+				inline SpaceDeclaration(const Reference<SpaceDeclaration>& this_, const Reference<Scopes::Space>& space_);
+				inline SpaceDeclaration(const SpaceDeclaration&) = delete;
+				inline virtual ~SpaceDeclaration() override = default;
+			public:
+				inline SpaceDeclaration& operator = (const SpaceDeclaration&) = delete;
+			public:
+				inline Reference<Scopes::Space> GetSpace() const;
+			};
 		}
 		
 		class Unit:
@@ -235,6 +252,17 @@ namespace Nu
 			public:
 				inline ThroughAccessScope& operator = (const ThroughAccessScope&) = delete;
 			};
+			class SpaceLikeScope:
+				public ThroughAccessScope
+			{
+			public:
+				inline SpaceLikeScope() = delete;
+				inline SpaceLikeScope(const Reference<SpaceLikeScope>& this_, const Markers& markers_ = Markers());
+				inline SpaceLikeScope(const SpaceLikeScope&) = delete;
+				inline virtual ~SpaceLikeScope() override = default;
+			public:
+				inline SpaceLikeScope& operator = (const SpaceLikeScope&) = delete;
+			};
 
 			class Outer:
 				public ThroughAccessScope
@@ -253,7 +281,7 @@ namespace Nu
 				inline void BindToContext(const Reference<Context>& context_);
 			};
 			class Root:
-				public ThroughAccessScope
+				public SpaceLikeScope
 			{
 			public:
 				inline Root() = delete;
@@ -262,6 +290,17 @@ namespace Nu
 				inline virtual ~Root() override = default;
 			public:
 				inline Root& operator = (const Root&) = delete;
+			};
+			class Space:
+				public SpaceLikeScope
+			{
+			public:
+				inline Space() = delete;
+				inline Space(const Reference<Space>& this_, const Markers& markers_ = Markers());
+				inline Space(const Space&) = delete;
+				inline virtual ~Space() override = default;
+			public:
+				inline Space& operator = (const Space&) = delete;
 			};
 		}
 		
@@ -303,10 +342,13 @@ namespace Nu
 			inline Reference<Markers::Name> ExtractName(Data& data_, It& it_, const Reference<Scope>& scope_);
 			inline Reference<Markers::Name> ParseName(Data& data_, It& it_, const Reference<Scope>& scope_);
 			template<class T> inline Reference<T> ParseNamed(Data& data_, It& it_, const Reference<Scope>& scope_);
+			// declarations
+			inline Reference<Scopes::Space> ParseSpace(Data& data_, It& it_, const Reference<Scope>& scope_);
+			inline Reference<Scopes::Space> ExtractSpaceDeclaration(Data& data_, It& it_, const Reference<Scope>& scope_);
 			// keyword
-			inline Reference<Keyword> ParseKeyword(Data& data_, It& it_, const Reference<Scope>& scope_);
+			inline Reference<Keyword> ParseKeyword(Data& data_, It& it_, const Reference<Scope>& scope_, const Keyword::Value& value_ = Keyword::Value::None);
 			// content of scopes
-			inline void ParseContent(const Reference<Scopes::Root>& root_);
+			inline void ParseContent(const Reference<Scopes::SpaceLikeScope>& space_);
 		public:
 			inline Output Parse(const Input& input_);
 		};
@@ -470,6 +512,21 @@ Nu::Reference<Nu::Parsing4::Unit> Nu::Parsing4::Markers::Name::GetUnit() const
 
 #pragma endregion
 
+#pragma region SpaceDeclaration
+
+Nu::Parsing4::Markers::SpaceDeclaration::SpaceDeclaration(const Reference<SpaceDeclaration>& this_, const Reference<Scopes::Space>& space_):
+	Marker(this_),
+	space(space_)
+{
+}
+
+Nu::Reference<Nu::Parsing4::Scopes::Space> Nu::Parsing4::Markers::SpaceDeclaration::GetSpace() const
+{
+	return space;
+}
+
+#pragma endregion
+
 #pragma endregion
 
 #pragma region MarkersContainer
@@ -531,6 +588,15 @@ Nu::Parsing4::Scopes::ThroughAccessScope::ThroughAccessScope(const Reference<Thr
 
 #pragma endregion
 
+#pragma region SpaceLikeScope
+
+Nu::Parsing4::Scopes::SpaceLikeScope::SpaceLikeScope(const Reference<SpaceLikeScope>& this_, const Markers& markers_):
+	ThroughAccessScope(this_, markers_)
+{
+}
+
+#pragma endregion
+
 #pragma region Outer
 
 Nu::Parsing4::Scopes::Outer::Outer(const Reference<Outer>& this_):
@@ -549,7 +615,16 @@ void Nu::Parsing4::Scopes::Outer::BindToContext(const Reference<Context>& contex
 #pragma region Root
 
 Nu::Parsing4::Scopes::Root::Root(const Reference<Root>& this_, const Markers& markers_):
-	ThroughAccessScope(this_, markers_)
+	SpaceLikeScope(this_, markers_)
+{
+}
+
+#pragma endregion
+
+#pragma region Space
+
+Nu::Parsing4::Scopes::Space::Space(const Reference<Space>& this_, const Markers& markers_):
+	SpaceLikeScope(this_, markers_)
 {
 }
 
@@ -968,10 +1043,11 @@ Nu::Reference<Nu::Parsing4::Markers::Declaration> Nu::Parsing4::Parser::ProcessE
 						if (value.find(nameValue) == 0)
 						{
 							auto &levels = nameIt.second;
-				
-							if (dotsCount < levels.size())
+							auto requiredLevel = dotsCount - 1;
+
+							if (requiredLevel < levels.size())
 							{
-								auto name = levels[dotsCount];
+								auto name = levels[requiredLevel];
 
 								if (value.size() == nameValue.size())
 								{
@@ -1033,10 +1109,11 @@ Nu::Reference<Nu::Parsing4::Markers::Name> Nu::Parsing4::Parser::ExtractName(Dat
 			if (value.find(nameValue) == 0)
 			{
 				auto &levels = nameIt.second;
-				
-				if (dotsCount < levels.size())
+				auto requiredLevel = dotsCount;
+
+				if (requiredLevel < levels.size())
 				{
-					auto name = levels[dotsCount];
+					auto name = levels[requiredLevel];
 
 					if (value.size() == nameValue.size())
 					{
@@ -1122,25 +1199,85 @@ template<class T> inline Nu::Reference<typename T> Nu::Parsing4::Parser::ParseNa
 	return nullptr;
 }
 
-Nu::Reference<Nu::Parsing4::Keyword> Nu::Parsing4::Parser::ParseKeyword(Data& data_, It& it_, const Reference<Scope>& scope_)
+Nu::Reference<Nu::Parsing4::Scopes::Space> Nu::Parsing4::Parser::ParseSpace(Data& data_, It& it_, const Reference<Scope>& scope_)
 {
 	auto o = it_;
 
-	if (auto keyword = ParseNamed<Keyword>(data_, it_, scope_))
+	if (auto spaceDeclaration = ParseMarker<Markers::SpaceDeclaration>(data_, it_))
 	{
-		return keyword;
+		auto space = spaceDeclaration->GetSpace();
+
+		return space;
+	}
+	else if (auto namedSpace = ParseNamed<Scopes::Space>(data_, it_, scope_))
+	{
+		return namedSpace;
+	}
+	else if (auto extracted = ExtractSpaceDeclaration(data_, it_, scope_))
+	{
+		auto newSpaceDeclaration = Make<Markers::SpaceDeclaration>(extracted);
+
+		MarkersContainer::Markers markers;
+		{
+			markers.push_back(newSpaceDeclaration);
+		}
+
+		throw MarkersReplaceRequired(o, it_, markers);
+	}
+
+	it_ = o;
+	return nullptr;
+}
+Nu::Reference<Nu::Parsing4::Scopes::Space> Nu::Parsing4::Parser::ExtractSpaceDeclaration(Data& data_, It& it_, const Reference<Scope>& scope_)
+{
+	auto o = it_;
+
+	if (auto keyword = ParseKeyword(data_, it_, scope_, Keyword::Value::Space))
+	{
+		if (auto group = ParseMarker<Markers::Group>(data_, it_))
+		{
+			if (group->GetOpening() == Markers::Group::BraceType::Figure && group->GetClosing() == Markers::Group::BraceType::Figure)
+			{
+				auto &markers = group->GetMarkers();
+				auto space = Make<Scopes::Space>(Move(markers));
+				{
+					context->SetParent(space, scope_);
+					context->AddToPendingToParse(space);
+
+					context->isChanged = true;
+				}
+
+				return Move(space);
+			}
+		}
 	}
 
 	it_ = o;
 	return nullptr;
 }
 
-void Nu::Parsing4::Parser::ParseContent(const Reference<Scopes::Root>& root_)
+Nu::Reference<Nu::Parsing4::Keyword> Nu::Parsing4::Parser::ParseKeyword(Data& data_, It& it_, const Reference<Scope>& scope_, const Keyword::Value& value_)
 {
-	auto &markers = root_->GetMarkers();
+	auto o = it_;
+
+	if (auto keyword = ParseNamed<Keyword>(data_, it_, scope_))
+	{
+		if (value_ == Keyword::Value::None || keyword->GetValue() == value_)
+		{
+			return keyword;
+		}
+	}
+
+	it_ = o;
+	return nullptr;
+}
+
+void Nu::Parsing4::Parser::ParseContent(const Reference<Scopes::SpaceLikeScope>& space_)
+{
+	auto &markers = space_->GetMarkers();
 	auto it = markers.begin();
 
-	context->SetPosition(root_, &it);
+	context->SetPosition(space_, &it);
 
 	bool isChanged = false;
 	bool isSkipped = false;
@@ -1153,9 +1290,21 @@ void Nu::Parsing4::Parser::ParseContent(const Reference<Scopes::Root>& root_)
 			{
 				// do nothing
 			}
+			else if (auto space = ParseSpace(markers, it, space_))
+			{
+				// do nothing
+			}
 			else if (auto declaration = ParseMarker<Markers::Declaration>(markers, it))
 			{
-				if (auto keyword = ParseKeyword(markers, it, root_))
+				if (auto delimiter = ParseMarker<Markers::Delimiter>(markers, it))
+				{
+					throw NotImplementedException(); // TODO: should we support this?
+				}
+				else if (auto space = ParseSpace(markers, it, space_))
+				{
+					context->SetValue(declaration, space);
+				}
+				else if (auto keyword = ParseKeyword(markers, it, space_))
 				{
 					context->SetValue(declaration, keyword);
 				}
@@ -1192,11 +1341,11 @@ void Nu::Parsing4::Parser::ParseContent(const Reference<Scopes::Root>& root_)
 		}
 	}
 
-	context->ResetPosition(root_);
+	context->ResetPosition(space_);
 
 	if (!isSkipped)
 	{
-		context->RemoveFromPendingToParse(root_);
+		context->RemoveFromPendingToParse(space_);
 	}
 }
 
@@ -1233,6 +1382,10 @@ Nu::Parsing4::Parser::Output Nu::Parsing4::Parser::Parse(const Input& input_)
 				if (auto root = UpCast<Scopes::Root>(scope))
 				{
 					ParseContent(root);
+				}
+				else if (auto space = UpCast<Scopes::Space>(scope))
+				{
+					ParseContent(space);
 				}
 				else
 				{

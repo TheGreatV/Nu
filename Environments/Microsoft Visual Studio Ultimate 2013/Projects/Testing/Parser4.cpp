@@ -92,6 +92,24 @@ namespace Testing
 
 			return false;
 		}
+		bool IsSpace(const Reference<Marker>& marker_)
+		{
+			if (auto spaceDeclaration = UpCast<Markers::SpaceDeclaration>(marker_))
+			{
+				return true;
+			}
+			else if (auto name = UpCast<Markers::Name>(marker_))
+			{
+				auto unit = name->GetUnit();
+
+				if (auto space = UpCast<Scopes::Space>(unit))
+				{
+					return true;
+				}
+			}
+
+			return false;
+		}
 
 		namespace ContextT
 		{
@@ -207,6 +225,8 @@ namespace Testing
 
 					auto markers = ToVector(root->GetMarkers());
 
+					Assert::IsTrue(markers.size() == 1, L"");
+
 					Assert::IsTrue(IsDelimiter(markers[0]), L"");
 				}
 				TEST_METHOD(Parse_SeveralDelimiters)
@@ -215,27 +235,33 @@ namespace Testing
 					auto root = context->GetRoot();
 
 					auto markers = ToVector(root->GetMarkers());
+					
+					Assert::IsTrue(markers.size() == 2, L"");
 
 					Assert::IsTrue(IsDelimiter(markers[0]), L"");
 					Assert::IsTrue(IsDelimiter(markers[1]), L"");
 				}
 				
-				TEST_METHOD(Parse_SingleKeywordAlias_WithoutSemicolon)
+				TEST_METHOD(Parse_SingleKeywordAlias_WithoutDelimiter)
 				{
 					auto context = Parse("x: space");
 					auto root = context->GetRoot();
 
 					auto markers = ToVector(root->GetMarkers());
 					
+					Assert::IsTrue(markers.size() == 2, L"");
+
 					Assert::IsTrue(IsDeclaration(markers[0], "x"), L"");
 					Assert::IsTrue(IsKeyword(markers[1], Keyword::Value::Space), L"");
 				}
-				TEST_METHOD(Parse_SingleKeywordAlias_WithSemicolon)
+				TEST_METHOD(Parse_SingleKeywordAlias_WithDelimiter)
 				{
 					auto context = Parse("x: space;");
 					auto root = context->GetRoot();
 
 					auto markers = ToVector(root->GetMarkers());
+
+					Assert::IsTrue(markers.size() == 3, L"");
 
 					Assert::IsTrue(IsDeclaration(markers[0], "x"), L"");
 					Assert::IsTrue(IsKeyword(markers[1], Keyword::Value::Space), L"");
@@ -247,6 +273,8 @@ namespace Testing
 					auto root = context->GetRoot();
 
 					auto markers = ToVector(root->GetMarkers());
+
+					Assert::IsTrue(markers.size() == 4, L"");
 
 					Assert::IsTrue(IsDeclaration(markers[0], "x"), L"");
 					Assert::IsTrue(IsKeyword(markers[1], Keyword::Value::Space), L"");
@@ -260,6 +288,8 @@ namespace Testing
 
 					auto markers = ToVector(root->GetMarkers());
 
+					Assert::IsTrue(markers.size() == 4, L"");
+
 					Assert::IsTrue(IsDeclaration(markers[0], "x"), L"");
 					Assert::IsTrue(IsKeyword(markers[1], Keyword::Value::Space), L"");
 					Assert::IsTrue(IsDeclaration(markers[2], "y"), L"");
@@ -271,6 +301,8 @@ namespace Testing
 					auto root = context->GetRoot();
 
 					auto markers = ToVector(root->GetMarkers());
+
+					Assert::IsTrue(markers.size() == 6, L"");
 
 					Assert::IsTrue(IsDeclaration(markers[0], "x"), L"");
 					Assert::IsTrue(IsKeyword(markers[1], Keyword::Value::Space), L"");
@@ -286,12 +318,210 @@ namespace Testing
 
 					auto markers = ToVector(root->GetMarkers());
 
+					Assert::IsTrue(markers.size() == 6, L"");
+
 					Assert::IsTrue(IsDeclaration(markers[0], "x"), L"");
 					Assert::IsTrue(IsKeyword(markers[1], Keyword::Value::Space), L"");
 					Assert::IsTrue(IsDeclaration(markers[2], "y"), L"");
 					Assert::IsTrue(IsKeyword(markers[3], Keyword::Value::Space), L"");
 					Assert::IsTrue(IsDeclaration(markers[4], "z"), L"");
 					Assert::IsTrue(IsKeyword(markers[5], Keyword::Value::Space), L"");
+				}
+
+				TEST_METHOD(Parse_SingleUnnamedSpaceDeclaration_WithoutDelimiter)
+				{
+					auto context = Parse("space {}");
+					auto root = context->GetRoot();
+
+					auto markers = ToVector(root->GetMarkers());
+					
+					Assert::IsTrue(markers.size() == 1, L"");
+
+					Assert::IsTrue(IsSpace(markers[0]), L"");
+				}
+				TEST_METHOD(Parse_SingleUnnamedSpaceDeclaration_WithDelimiter)
+				{
+					auto context = Parse("space {};");
+					auto root = context->GetRoot();
+
+					auto markers = ToVector(root->GetMarkers());
+
+					Assert::IsTrue(markers.size() == 2, L"");
+
+					Assert::IsTrue(IsSpace(markers[0]), L"");
+					Assert::IsTrue(IsDelimiter(markers[1]), L"");
+				}
+				TEST_METHOD(Parse_DoubleUnnamedSpaceDeclaration_WithoutDelimiter)
+				{
+					auto context = Parse("space {} space {}");
+					auto root = context->GetRoot();
+
+					auto markers = ToVector(root->GetMarkers());
+
+					Assert::IsTrue(markers.size() == 2, L"");
+
+					Assert::IsTrue(IsSpace(markers[0]), L"");
+					Assert::IsTrue(IsSpace(markers[1]), L"");
+				}
+				TEST_METHOD(Parse_DoubleUnnamedSpaceDeclaration_WithDelimiter)
+				{
+					auto context = Parse("space {}; space {}");
+					auto root = context->GetRoot();
+
+					auto markers = ToVector(root->GetMarkers());
+
+					Assert::IsTrue(markers.size() == 3, L"");
+
+					Assert::IsTrue(IsSpace(markers[0]), L"");
+					Assert::IsTrue(IsDelimiter(markers[1]), L"");
+					Assert::IsTrue(IsSpace(markers[2]), L"");
+				}
+				TEST_METHOD(Parse_SingleNamedSpaceDeclaration_WithoutDelimiter)
+				{
+					auto context = Parse("x: space {}");
+					auto root = context->GetRoot();
+
+					auto markers = ToVector(root->GetMarkers());
+
+					Assert::IsTrue(markers.size() == 2, L"");
+
+					Assert::IsTrue(IsDeclaration(markers[0], "x"), L"");
+					Assert::IsTrue(IsSpace(markers[1]), L"");
+				}
+			public:
+				TEST_METHOD(Parse_SpaceContent_SingleDelimiter)
+				{
+					auto context = Parse("space {;}");
+					auto root = context->GetRoot();
+					auto rootMarkers = ToVector(root->GetMarkers());
+					auto space = UpCast<Markers::SpaceDeclaration>(rootMarkers[0])->GetSpace();
+					auto markers = ToVector(space->GetMarkers());
+					
+					Assert::IsTrue(markers.size() == 1, L"");
+					
+					Assert::IsTrue(IsDelimiter(markers[0]), L"");
+				}
+				TEST_METHOD(Parse_SpaceContent_DoubleDelimiter)
+				{
+					auto context = Parse("space {;;}");
+					auto root = context->GetRoot();
+					auto rootMarkers = ToVector(root->GetMarkers());
+					auto space = UpCast<Markers::SpaceDeclaration>(rootMarkers[0])->GetSpace();
+					auto markers = ToVector(space->GetMarkers());
+
+					Assert::IsTrue(markers.size() == 2, L"");
+
+					Assert::IsTrue(IsDelimiter(markers[0]), L"");
+					Assert::IsTrue(IsDelimiter(markers[1]), L"");
+				}
+
+				TEST_METHOD(Parse_SpaceContent_SingleKeywordAlias_WithoutDelimiter)
+				{
+					auto context = Parse("space { x: space }");
+					auto root = context->GetRoot();
+					auto rootMarkers = ToVector(root->GetMarkers());
+					auto space = UpCast<Markers::SpaceDeclaration>(rootMarkers[0])->GetSpace();
+					auto markers = ToVector(space->GetMarkers());
+
+					Assert::IsTrue(markers.size() == 2, L"");
+
+					Assert::IsTrue(IsDeclaration(markers[0], "x"), L"");
+					Assert::IsTrue(IsKeyword(markers[1], Keyword::Value::Space), L"");
+				}
+				TEST_METHOD(Parse_SpaceContent_SingleKeywordAlias_WithDelimiter)
+				{
+					auto context = Parse("space { x: space; }");
+					auto root = context->GetRoot();
+					auto rootMarkers = ToVector(root->GetMarkers());
+					auto space = UpCast<Markers::SpaceDeclaration>(rootMarkers[0])->GetSpace();
+					auto markers = ToVector(space->GetMarkers());
+
+					Assert::IsTrue(markers.size() == 3, L"");
+
+					Assert::IsTrue(IsDeclaration(markers[0], "x"), L"");
+					Assert::IsTrue(IsKeyword(markers[1], Keyword::Value::Space), L"");
+					Assert::IsTrue(IsDelimiter(markers[2]), L"");
+				}
+				TEST_METHOD(Parse_SpaceContent_DoubleForwardKeywordAlias)
+				{
+					auto context = Parse("space { x: space y: x }");
+					auto root = context->GetRoot();
+					auto rootMarkers = ToVector(root->GetMarkers());
+					auto space = UpCast<Markers::SpaceDeclaration>(rootMarkers[0])->GetSpace();
+					auto markers = ToVector(space->GetMarkers());
+
+					Assert::IsTrue(markers.size() == 4, L"");
+
+					Assert::IsTrue(IsDeclaration(markers[0], "x"), L"");
+					Assert::IsTrue(IsKeyword(markers[1], Keyword::Value::Space), L"");
+					Assert::IsTrue(IsDeclaration(markers[2], "y"), L"");
+					Assert::IsTrue(IsKeyword(markers[3], Keyword::Value::Space), L"");
+				}
+				TEST_METHOD(Parse_SpaceContent_DoubleBackwardKeywordAlias)
+				{
+					auto context = Parse("space { x: y y: space }");
+					auto root = context->GetRoot();
+					auto rootMarkers = ToVector(root->GetMarkers());
+					auto space = UpCast<Markers::SpaceDeclaration>(rootMarkers[0])->GetSpace();
+					auto markers = ToVector(space->GetMarkers());
+
+					Assert::IsTrue(markers.size() == 4, L"");
+
+					Assert::IsTrue(IsDeclaration(markers[0], "x"), L"");
+					Assert::IsTrue(IsKeyword(markers[1], Keyword::Value::Space), L"");
+					Assert::IsTrue(IsDeclaration(markers[2], "y"), L"");
+					Assert::IsTrue(IsKeyword(markers[3], Keyword::Value::Space), L"");
+				}
+				TEST_METHOD(Parse_SpaceContent_TripleForwardKeywordAlias)
+				{
+					auto context = Parse("space { x: space y: x z: y }");
+					auto root = context->GetRoot();
+					auto rootMarkers = ToVector(root->GetMarkers());
+					auto space = UpCast<Markers::SpaceDeclaration>(rootMarkers[0])->GetSpace();
+					auto markers = ToVector(space->GetMarkers());
+
+					Assert::IsTrue(markers.size() == 6, L"");
+
+					Assert::IsTrue(IsDeclaration(markers[0], "x"), L"");
+					Assert::IsTrue(IsKeyword(markers[1], Keyword::Value::Space), L"");
+					Assert::IsTrue(IsDeclaration(markers[2], "y"), L"");
+					Assert::IsTrue(IsKeyword(markers[3], Keyword::Value::Space), L"");
+					Assert::IsTrue(IsDeclaration(markers[4], "z"), L"");
+					Assert::IsTrue(IsKeyword(markers[5], Keyword::Value::Space), L"");
+				}
+				TEST_METHOD(Parse_SpaceContent_TripleBackwardKeywordAlias)
+				{
+					auto context = Parse("space { x: y y: z z: space }");
+					auto root = context->GetRoot();
+					auto rootMarkers = ToVector(root->GetMarkers());
+					auto space = UpCast<Markers::SpaceDeclaration>(rootMarkers[0])->GetSpace();
+					auto markers = ToVector(space->GetMarkers());
+
+					Assert::IsTrue(markers.size() == 6, L"");
+
+					Assert::IsTrue(IsDeclaration(markers[0], "x"), L"");
+					Assert::IsTrue(IsKeyword(markers[1], Keyword::Value::Space), L"");
+					Assert::IsTrue(IsDeclaration(markers[2], "y"), L"");
+					Assert::IsTrue(IsKeyword(markers[3], Keyword::Value::Space), L"");
+					Assert::IsTrue(IsDeclaration(markers[4], "z"), L"");
+					Assert::IsTrue(IsKeyword(markers[5], Keyword::Value::Space), L"");
+				}
+			public:
+				TEST_METHOD(Parse_SpaceAccess_SingleNestedElement_ForwardAccess)
+				{
+					auto context = Parse("x: space { y: space } a: x.y");
+					auto root = context->GetRoot();
+					auto markers = ToVector(root->GetMarkers());
+
+					Assert::IsTrue(IsKeyword(markers[3], Keyword::Value::Space), L"");
+				}
+				TEST_METHOD(Parse_SpaceAccess_DoubleNestedElement_ForwardAccess)
+				{
+					auto context = Parse("x: space { y: space { z: space } } a: x.y.z");
+					auto root = context->GetRoot();
+					auto markers = ToVector(root->GetMarkers());
+
+					Assert::IsTrue(IsKeyword(markers[3], Keyword::Value::Space), L"");
 				}
 			};
 		}
