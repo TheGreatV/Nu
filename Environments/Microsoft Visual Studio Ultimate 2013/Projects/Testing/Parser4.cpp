@@ -110,6 +110,36 @@ namespace Testing
 
 			return false;
 		}
+		bool IsSchema(const Reference<Marker>& marker_)
+		{
+			if (auto schemaDeclaration = UpCast<Markers::SchemaDeclaration>(marker_))
+			{
+				return true;
+			}
+			else if (auto name = UpCast<Markers::Name>(marker_))
+			{
+				auto unit = name->GetUnit();
+
+				if (auto schema = UpCast<Scopes::Schema>(unit))
+				{
+					return true;
+				}
+			}
+
+			return false;
+		}
+		template<class T> bool IsCommand(const Reference<Marker>& marker_)
+		{
+			if (auto command = UpCast<Command>(marker_))
+			{
+				if (auto casted = UpCast<T>(command))
+				{
+					return true;
+				}
+			}
+
+			return false;
+		}
 
 		namespace ContextT
 		{
@@ -388,6 +418,97 @@ namespace Testing
 					Assert::IsTrue(IsDeclaration(markers[0], "x"), L"");
 					Assert::IsTrue(IsSpace(markers[1]), L"");
 				}
+
+				TEST_METHOD(Parse_SingleUnnamedSchemaDeclaration_WithoutDelimiter)
+				{
+					auto context = Parse("schema {}");
+					auto root = context->GetRoot();
+
+					auto markers = ToVector(root->GetMarkers());
+
+					Assert::IsTrue(markers.size() == 1, L"");
+
+					Assert::IsTrue(IsSchema(markers[0]), L"");
+				}
+				TEST_METHOD(Parse_SingleUnnamedSchemaDeclaration_WithDelimiter)
+				{
+					auto context = Parse("schema {};");
+					auto root = context->GetRoot();
+
+					auto markers = ToVector(root->GetMarkers());
+
+					Assert::IsTrue(markers.size() == 2, L"");
+
+					Assert::IsTrue(IsSchema(markers[0]), L"");
+					Assert::IsTrue(IsDelimiter(markers[1]), L"");
+				}
+				TEST_METHOD(Parse_DoubleUnnamedSchemaDeclaration_WithoutDelimiter)
+				{
+					auto context = Parse("schema {} schema {}");
+					auto root = context->GetRoot();
+
+					auto markers = ToVector(root->GetMarkers());
+
+					Assert::IsTrue(markers.size() == 2, L"");
+
+					Assert::IsTrue(IsSchema(markers[0]), L"");
+					Assert::IsTrue(IsSchema(markers[1]), L"");
+				}
+				TEST_METHOD(Parse_DoubleUnnamedSchemaDeclaration_WithDelimiter)
+				{
+					auto context = Parse("schema {}; schema {}");
+					auto root = context->GetRoot();
+
+					auto markers = ToVector(root->GetMarkers());
+
+					Assert::IsTrue(markers.size() == 3, L"");
+
+					Assert::IsTrue(IsSchema(markers[0]), L"");
+					Assert::IsTrue(IsDelimiter(markers[1]), L"");
+					Assert::IsTrue(IsSchema(markers[2]), L"");
+				}
+				TEST_METHOD(Parse_SingleNamedSchemaDeclaration_WithoutDelimiter)
+				{
+					auto context = Parse("x: schema {}");
+					auto root = context->GetRoot();
+
+					auto markers = ToVector(root->GetMarkers());
+
+					Assert::IsTrue(markers.size() == 2, L"");
+
+					Assert::IsTrue(IsDeclaration(markers[0], "x"), L"");
+					Assert::IsTrue(IsSchema(markers[1]), L"");
+				}
+
+				TEST_METHOD(Parse_SingleUnnamedSpaceAlgorithm_WithoutBody)
+				{
+					auto context = Parse("space { algorithm none (); }");
+					auto root = context->GetRoot();
+
+					// TODO
+				}
+				TEST_METHOD(Parse_SingleUnnamedSpaceAlgorithm_WithBody)
+				{
+					auto context = Parse("space { algorithm none () body {} }");
+					auto root = context->GetRoot();
+
+					// TODO
+				}
+
+				TEST_METHOD(Parse_SingleUnnamedCreateInstanceCommand_NoneSchema_WithoutDelimiter)
+				{
+					auto context = Parse("space { algorithm none () body { make none } }");
+					auto root = context->GetRoot();
+
+					// TODO
+				}
+				TEST_METHOD(Parse_SingleUnnamedCreateInstanceCommand_NoneSchema_WithDelimiter)
+				{
+					auto context = Parse("space { algorithm none () body { make none; } }");
+					auto root = context->GetRoot();
+
+					// TODO
+				}
 			public:
 				TEST_METHOD(Parse_Keyword_Space)
 				{
@@ -398,6 +519,15 @@ namespace Testing
 
 					Assert::IsTrue(IsKeyword(markers[1], Keyword::Value::Space), L"");
 				}
+				TEST_METHOD(Parse_Keyword_Schema)
+				{
+					auto context = Parse("x: schema");
+					auto root = context->GetRoot();
+
+					auto markers = ToVector(root->GetMarkers());
+
+					Assert::IsTrue(IsKeyword(markers[1], Keyword::Value::Schema), L"");
+				}
 				TEST_METHOD(Parse_Keyword_Algorithm)
 				{
 					auto context = Parse("x: algorithm");
@@ -406,6 +536,33 @@ namespace Testing
 					auto markers = ToVector(root->GetMarkers());
 
 					Assert::IsTrue(IsKeyword(markers[1], Keyword::Value::Algorithm), L"");
+				}
+				TEST_METHOD(Parse_Keyword_Body)
+				{
+					auto context = Parse("x: body");
+					auto root = context->GetRoot();
+
+					auto markers = ToVector(root->GetMarkers());
+
+					Assert::IsTrue(IsKeyword(markers[1], Keyword::Value::Body), L"");
+				}
+				TEST_METHOD(Parse_Keyword_Make)
+				{
+					auto context = Parse("x: make");
+					auto root = context->GetRoot();
+
+					auto markers = ToVector(root->GetMarkers());
+
+					Assert::IsTrue(IsKeyword(markers[1], Keyword::Value::Make), L"");
+				}
+				TEST_METHOD(Parse_Keyword_None)
+				{
+					auto context = Parse("x: none");
+					auto root = context->GetRoot();
+
+					auto markers = ToVector(root->GetMarkers());
+
+					Assert::IsTrue(IsSchema(markers[1]), L"");
 				}
 			public:
 				TEST_METHOD(Parse_SpaceContent_SingleDelimiter)
@@ -541,6 +698,126 @@ namespace Testing
 					auto markers = ToVector(root->GetMarkers());
 
 					Assert::IsTrue(IsKeyword(markers[3], Keyword::Value::Space), L"");
+				}
+			public:
+				TEST_METHOD(Parse_BodyContent_SingleDelimiter)
+				{
+					auto context = Parse("space { algorithm none () body { ; } }");
+					auto root = context->GetRoot();
+					auto rootMarkers = ToVector(root->GetMarkers());
+					auto space = UpCast<Markers::SpaceDeclaration>(rootMarkers[0])->GetSpace();
+					auto spaceMarkers = ToVector(space->GetMarkers());
+					auto body = UpCast<Markers::BodyDeclaration>(spaceMarkers[1])->GetBody();
+					auto markers = ToVector(body->GetMarkers());
+
+					Assert::IsTrue(markers.size() == 1, L"");
+
+					Assert::IsTrue(IsDelimiter(markers[0]), L"");
+				}
+				TEST_METHOD(Parse_BodyContent_DoubleDelimiter)
+				{
+					auto context = Parse("space { algorithm none () body { ;; } }");
+					auto root = context->GetRoot();
+					auto rootMarkers = ToVector(root->GetMarkers());
+					auto space = UpCast<Markers::SpaceDeclaration>(rootMarkers[0])->GetSpace();
+					auto spaceMarkers = ToVector(space->GetMarkers());
+					auto body = UpCast<Markers::BodyDeclaration>(spaceMarkers[1])->GetBody();
+					auto markers = ToVector(body->GetMarkers());
+
+					Assert::IsTrue(markers.size() == 2, L"");
+
+					Assert::IsTrue(IsDelimiter(markers[0]), L"");
+					Assert::IsTrue(IsDelimiter(markers[1]), L"");
+				}
+				
+				TEST_METHOD(Parse_BodyContent_SingleKeywordAlias_WithoutDelimiter)
+				{
+					auto context = Parse("space { algorithm none () body { x: space } }");
+					auto root = context->GetRoot();
+					auto rootMarkers = ToVector(root->GetMarkers());
+					auto space = UpCast<Markers::SpaceDeclaration>(rootMarkers[0])->GetSpace();
+					auto spaceMarkers = ToVector(space->GetMarkers());
+					auto body = UpCast<Markers::BodyDeclaration>(spaceMarkers[1])->GetBody();
+					auto markers = ToVector(body->GetMarkers());
+
+					Assert::IsTrue(markers.size() == 2, L"");
+
+					Assert::IsTrue(IsDeclaration(markers[0], "x"), L"");
+					Assert::IsTrue(IsKeyword(markers[1], Keyword::Value::Space), L"");
+				}
+				TEST_METHOD(Parse_BodyContent_SingleKeywordAlias_WithDelimiter)
+				{
+					auto context = Parse("space { algorithm none () body { x: space; } }");
+					auto root = context->GetRoot();
+					auto rootMarkers = ToVector(root->GetMarkers());
+					auto space = UpCast<Markers::SpaceDeclaration>(rootMarkers[0])->GetSpace();
+					auto spaceMarkers = ToVector(space->GetMarkers());
+					auto body = UpCast<Markers::BodyDeclaration>(spaceMarkers[1])->GetBody();
+					auto markers = ToVector(body->GetMarkers());
+
+					Assert::IsTrue(markers.size() == 3, L"");
+
+					Assert::IsTrue(IsDeclaration(markers[0], "x"), L"");
+					Assert::IsTrue(IsKeyword(markers[1], Keyword::Value::Space), L"");
+					Assert::IsTrue(IsDelimiter(markers[2]), L"");
+				}
+
+				TEST_METHOD(Parse_BodyContent_SingleUnnamedCreateInstanceCommand_NoneSchema_WithoutDelimiter)
+				{
+					auto context = Parse("space { algorithm none () body { make none } }");
+					auto root = context->GetRoot();
+					auto rootMarkers = ToVector(root->GetMarkers());
+					auto space = UpCast<Markers::SpaceDeclaration>(rootMarkers[0])->GetSpace();
+					auto spaceMarkers = ToVector(space->GetMarkers());
+					auto body = UpCast<Markers::BodyDeclaration>(spaceMarkers[1])->GetBody();
+					auto markers = ToVector(body->GetMarkers());
+
+					Assert::IsTrue(markers.size() == 1, L"");
+
+					Assert::IsTrue(IsCommand<Commands::CreateInstance>(markers[0]), L"");
+				}
+				TEST_METHOD(Parse_BodyContent_SingleNamedCreateInstanceCommand_NoneSchema_WithoutDelimiter)
+				{
+					auto context = Parse("space { algorithm none () body { x: make none } }");
+					auto root = context->GetRoot();
+					auto rootMarkers = ToVector(root->GetMarkers());
+					auto space = UpCast<Markers::SpaceDeclaration>(rootMarkers[0])->GetSpace();
+					auto spaceMarkers = ToVector(space->GetMarkers());
+					auto body = UpCast<Markers::BodyDeclaration>(spaceMarkers[1])->GetBody();
+					auto markers = ToVector(body->GetMarkers());
+
+					Assert::IsTrue(markers.size() == 2, L"");
+
+					Assert::IsTrue(IsDeclaration(markers[0], "x"), L"");
+					Assert::IsTrue(IsCommand<Commands::CreateInstance>(markers[1]), L"");
+				}
+				TEST_METHOD(Parse_BodyContent_SingleUnnamedCreateInstanceCommand_NamedSchemaForwardDeclraration_WithoutDelimiter)
+				{
+					auto context = Parse("X: schema {} space { algorithm none () body { make X } }");
+					auto root = context->GetRoot();
+					auto rootMarkers = ToVector(root->GetMarkers());
+					auto space = UpCast<Markers::SpaceDeclaration>(rootMarkers[2])->GetSpace();
+					auto spaceMarkers = ToVector(space->GetMarkers());
+					auto body = UpCast<Markers::BodyDeclaration>(spaceMarkers[1])->GetBody();
+					auto markers = ToVector(body->GetMarkers());
+
+					Assert::IsTrue(markers.size() == 1, L"");
+
+					Assert::IsTrue(IsCommand<Commands::CreateInstance>(markers[0]), L"");
+				}
+				TEST_METHOD(Parse_BodyContent_SingleUnnamedCreateInstanceCommand_NamedSchemaBackwardDeclraration_WithoutDelimiter)
+				{
+					auto context = Parse("space { algorithm none () body { make X } } X: schema {}");
+					auto root = context->GetRoot();
+					auto rootMarkers = ToVector(root->GetMarkers());
+					auto space = UpCast<Markers::SpaceDeclaration>(rootMarkers[0])->GetSpace();
+					auto spaceMarkers = ToVector(space->GetMarkers());
+					auto body = UpCast<Markers::BodyDeclaration>(spaceMarkers[1])->GetBody();
+					auto markers = ToVector(body->GetMarkers());
+
+					Assert::IsTrue(markers.size() == 1, L"");
+
+					Assert::IsTrue(IsCommand<Commands::CreateInstance>(markers[0]), L"");
 				}
 			};
 		}
