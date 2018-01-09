@@ -555,6 +555,15 @@ namespace Testing
 
 					Assert::IsTrue(IsKeyword(markers[1], Keyword::Value::Make), L"");
 				}
+				TEST_METHOD(Parse_Keyword_Copy)
+				{
+					auto context = Parse("x: copy");
+					auto root = context->GetRoot();
+
+					auto markers = ToVector(root->GetMarkers());
+
+					Assert::IsTrue(IsKeyword(markers[1], Keyword::Value::Copy), L"");
+				}
 				TEST_METHOD(Parse_Keyword_None)
 				{
 					auto context = Parse("x: none");
@@ -818,6 +827,39 @@ namespace Testing
 					Assert::IsTrue(markers.size() == 1, L"");
 
 					Assert::IsTrue(IsCommand<Commands::CreateInstance>(markers[0]), L"");
+				}
+			public:
+				TEST_METHOD(Parse_SpaceBraceAlgorithmBody_SingleBraceAlgorithmCall)
+				{
+					auto context = Parse("x: space { algorithm none() body { x() } }");
+					auto root = context->GetRoot();
+					auto rootMarkers = ToVector(root->GetMarkers());
+					auto space = UpCast<Markers::SpaceDeclaration>(rootMarkers[1])->GetSpace();
+					auto spaceMarkers = ToVector(space->GetMarkers());
+					auto body = UpCast<Markers::BodyDeclaration>(spaceMarkers[1])->GetBody();
+					auto markers = ToVector(body->GetMarkers());
+					
+					Assert::IsTrue(markers.size() == 1, L"");
+					
+					Assert::IsTrue(IsCommand<Commands::AlgorithmCall>(markers[0]), L"");
+				}
+				TEST_METHOD(Parse_SpaceBraceAlgorithmBody_PingPongBraceAlgorithmsCall)
+				{
+					auto context = Parse("x: space { algorithm none() body { y() } } y: space { algorithm none() body { x() } }");
+					// auto root = context->GetRoot();
+					// auto rootMarkers = ToVector(root->GetMarkers());
+					// auto space = UpCast<Markers::SpaceDeclaration>(rootMarkers[1])->GetSpace();
+					// auto spaceMarkers = ToVector(space->GetMarkers());
+					// auto body = UpCast<Markers::BodyDeclaration>(spaceMarkers[1])->GetBody();
+					// auto markers = ToVector(body->GetMarkers());
+					// 
+					// Assert::IsTrue(markers.size() == 1, L"");
+					// 
+					// Assert::IsTrue(IsCommand<Commands::AlgorithmCall>(markers[0]), L"");
+				}
+				TEST_METHOD(Test)
+				{
+					auto context = Parse("A: schema{}; x: space { algorithm none(copy A) body { a: make A; x(a); } }");
 				}
 			};
 		}
