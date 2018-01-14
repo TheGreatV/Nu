@@ -829,7 +829,7 @@ namespace Testing
 					Assert::IsTrue(IsCommand<Commands::CreateInstance>(markers[0]), L"");
 				}
 			public:
-				TEST_METHOD(Parse_SpaceBraceAlgorithmBody_SingleBraceAlgorithmCall)
+				TEST_METHOD(Parse_SpaceBraceAlgorithmBody_SingleBraceAlgorithmCall_EmptyArguments)
 				{
 					auto context = Parse("x: space { algorithm none() body { x() } }");
 					auto root = context->GetRoot();
@@ -843,23 +843,24 @@ namespace Testing
 					
 					Assert::IsTrue(IsCommand<Commands::AlgorithmCall>(markers[0]), L"");
 				}
+				TEST_METHOD(Parse_SpaceBraceAlgorithmBody_SingleBraceAlgorithmCall_SingleArgument)
+				{
+					auto context = Parse("x: space { algorithm none(copy none) body { n: make none; x(n); } }");
+
+					// TODO
+				}
 				TEST_METHOD(Parse_SpaceBraceAlgorithmBody_PingPongBraceAlgorithmsCall)
 				{
 					auto context = Parse("x: space { algorithm none() body { y() } } y: space { algorithm none() body { x() } }");
-					// auto root = context->GetRoot();
-					// auto rootMarkers = ToVector(root->GetMarkers());
-					// auto space = UpCast<Markers::SpaceDeclaration>(rootMarkers[1])->GetSpace();
-					// auto spaceMarkers = ToVector(space->GetMarkers());
-					// auto body = UpCast<Markers::BodyDeclaration>(spaceMarkers[1])->GetBody();
-					// auto markers = ToVector(body->GetMarkers());
-					// 
-					// Assert::IsTrue(markers.size() == 1, L"");
-					// 
-					// Assert::IsTrue(IsCommand<Commands::AlgorithmCall>(markers[0]), L"");
+
+					// TODO
 				}
 				TEST_METHOD(Test)
 				{
-					auto context = Parse("A: schema{}; x: space { algorithm none(copy A) body { a: make A; x(a); } }");
+					auto context = Parse("x: space{ algorithm none(a: copy none) body { x(a); } }");
+					// auto context = Parse("x: space{ algorithm none(copy none) body{ x(); } algorithm none() body { n: make none; x(n); } }");
+
+					// TODO
 				}
 			};
 		}
