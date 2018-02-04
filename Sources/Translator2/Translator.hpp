@@ -181,6 +181,14 @@ namespace Nu
 			public:
 				inline virtual Reference<Instance> GetInstance() const = 0;
 			};
+			class ReturnInstance:
+				public Command
+			{
+			public:
+				inline virtual ~ReturnInstance() = default;
+			public:
+				inline virtual Reference<Instance> GetInstance() const = 0;
+			};
 			class CallAlgorithm:
 				public Command
 			{

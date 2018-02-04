@@ -564,6 +564,15 @@ namespace Testing
 
 					Assert::IsTrue(IsKeyword(markers[1], Keyword::Value::Copy), L"");
 				}
+				TEST_METHOD(Parse_Keyword_Return)
+				{
+					auto context = Parse("x: return");
+					auto root = context->GetRoot();
+
+					auto markers = ToVector(root->GetMarkers());
+
+					Assert::IsTrue(IsKeyword(markers[1], Keyword::Value::Return), L"");
+				}
 				TEST_METHOD(Parse_Keyword_None)
 				{
 					auto context = Parse("x: none");
@@ -859,6 +868,19 @@ namespace Testing
 				{
 					auto context = Parse("x: space{ algorithm none(a: copy none) body { x(a); } }");
 					// auto context = Parse("x: space{ algorithm none(copy none) body{ x(); } algorithm none() body { n: make none; x(n); } }");
+
+					// TODO
+				}
+				TEST_METHOD(Test2)
+				{
+					auto context = Parse("space{ algorithm none() body{ a: make none; return a; } }");
+					// auto context = Parse("x: space{ algorithm none(copy none) body{ x(); } algorithm none() body { n: make none; x(n); } }");
+
+					// TODO
+				}
+				TEST_METHOD(Test3)
+				{
+					auto context = Parse("x: space{ algorithm none(a: copy none, b: copy none) body { x(a,b); } }");
 
 					// TODO
 				}

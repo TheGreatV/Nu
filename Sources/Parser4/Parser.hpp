@@ -27,20 +27,6 @@ namespace Nu
 
 	namespace Parsing4
 	{
-		/*
-		class T:
-		public Entity
-		{
-		public:
-		inline T() = delete;
-		inline T(const Reference<T>& this_);
-		inline T(const T&) = delete;
-		inline virtual ~T() override = default;
-		public:
-		inline T& operator = (const T&) = delete;
-		};
-		*/
-
 		// Declarations
 		class Marker;
 		namespace Markers
@@ -310,6 +296,7 @@ namespace Nu
 				Body,
 				Make,
 				Copy,
+				Return,
 			};
 		protected:
 			const Value value;
@@ -402,6 +389,7 @@ namespace Nu
 				const Reference<Parsing4::Markers::Declaration> declarationBody = Make<Parsing4::Markers::Declaration>("body");
 				const Reference<Parsing4::Markers::Declaration> declarationMake = Make<Parsing4::Markers::Declaration>("make");
 				const Reference<Parsing4::Markers::Declaration> declarationCopy = Make<Parsing4::Markers::Declaration>("copy");
+				const Reference<Parsing4::Markers::Declaration> declarationReturn = Make<Parsing4::Markers::Declaration>("return");
 				const Reference<Parsing4::Markers::Declaration> declarationNone = Make<Parsing4::Markers::Declaration>("none");
 				const Reference<Keyword> keywordSpace = Make<Keyword>(Keyword::Value::Space);
 				const Reference<Keyword> keywordSchema = Make<Keyword>(Keyword::Value::Schema);
@@ -409,6 +397,7 @@ namespace Nu
 				const Reference<Keyword> keywordBody = Make<Keyword>(Keyword::Value::Body);
 				const Reference<Keyword> keywordMake = Make<Keyword>(Keyword::Value::Make);
 				const Reference<Keyword> keywordCopy = Make<Keyword>(Keyword::Value::Copy);
+				const Reference<Keyword> keywordReturn = Make<Keyword>(Keyword::Value::Return);
 				const Reference<Scopes::Schema> schemaNone = Make<Scopes::Schema>();
 			public:
 				inline Outer() = delete;
@@ -620,6 +609,21 @@ namespace Nu
 			public:
 				inline Reference<Scopes::Instance> GetInstance() const;
 			};
+			class ReturnInstance:
+				public Command
+			{
+			protected:
+				const Reference<Scopes::Instance> instance;
+			public:
+				inline ReturnInstance() = delete;
+				inline ReturnInstance(const Reference<ReturnInstance>& this_, const Reference<Scopes::Instance>& instance_);
+				inline ReturnInstance(const ReturnInstance&) = delete;
+				inline virtual ~ReturnInstance() override = default;
+			public:
+				inline ReturnInstance& operator = (const ReturnInstance&) = delete;
+			public:
+				inline Reference<Scopes::Instance> GetInstance() const;
+			};
 			class ResultInstance:
 				public Command
 			{
@@ -685,6 +689,7 @@ namespace Nu
 			inline static Reference<Marker> Convert(const Reference<Lexing2::Token>& token_);
 			inline static MarkersContainer::Markers Convert(const Lexing2::Container::Tokens& tokens_);
 			inline static Reference<Scopes::Root> Convert(const Reference<Lexing2::Container>& container_);
+			inline static Reference<Markers::SequenceReference> Convert(const Reference<Markers::Group>& group_, const Reference<Context>& context_);
 		protected:
 			Reference<Context> context;
 		public:
@@ -732,6 +737,11 @@ namespace Nu
 			inline Reference<Commands::CreateInstance>								ExtractCreateInstanceCommand(Data& data_, It& it_, const Reference<Scopes::Body>& body_);
 			inline Reference<Commands::CreateInstance>								ParseCreateInstanceCommand(Data& data_, It& it_, const Reference<Scopes::Body>& body_);
 
+			inline Reference<Commands::ReturnInstance>								ExtractReturnInstanceCommand(Data& data_, It& it_, const Reference<Scopes::Body>& body_);
+			inline Reference<Commands::ReturnInstance>								ParseReturnInstanceCommand(Data& data_, It& it_, const Reference<Scopes::Body>& body_);
+
+			inline Reference<Pair<Reference<Scopes::Sequence>, Commands::BraceAlgorithmCall::Arguments>> ParseBraceAlgorithmCallArguments(Data& data_, It& it_, const Reference<Scopes::Body>& body_);
+			
 			inline Reference<Commands::BraceAlgorithmCall>							ExtractBraceAlgorithmCall(Data& data_, It& it_, const Reference<Scopes::Body>& body_);
 			inline Reference<Commands::BraceAlgorithmCall>							ParseBraceAlgorithmCall(Data& data_, It& it_, const Reference<Scopes::Body>& body_);
 			inline Reference<Commands::AlgorithmCall>								ParseAlgorithmCall(Data& data_, It& it_, const Reference<Scopes::Body>& body_);
@@ -739,9 +749,6 @@ namespace Nu
 			inline Reference<Scopes::Sequence>										ExtractSequence(Data& data_, It& it_, const Reference<Scope>& scope_);
 			inline Reference<Scopes::Sequence>										ParseSequence(Data& data_, It& it_, const Reference<Scope>& scope_);
 
-			// inline Reference<Commands::CopyInstance>								ExtractCopyInstanceCommand(Data& data_, It& it_, const Reference<Algorithm>& algorithm_);
-			// inline Reference<Commands::CopyInstance>								ParseCopyInstanceCommand(Data& data_, It& it_, const Reference<Algorithm>& algorithm_);
-			// keyword
 			inline Reference<Keyword>												ParseKeyword(Data& data_, It& it_, const Reference<Scope>& scope_, const Keyword::Value& value_ = Keyword::Value::None);
 			// content of scopes
 			inline void																ParseContent(const Reference<Scopes::Root>& root_);
@@ -781,7 +788,7 @@ namespace Nu
 		public: // TODO: make protected
 			bool isSkipped;
 			bool isChanged;
-			Map<Reference<Scope>, Parser::It*> currentPosition;
+			Map<Reference<MarkersContainer>, Parser::It*> currentPosition;
 			Vector<Reference<Scope>> pendingToParse;
 			Map<Reference<Unit>, Reference<Scope>> parentLookup;
 			Map<Reference<Markers::Declaration>, Reference<Unit>> valueLookup;
@@ -821,8 +828,8 @@ namespace Nu
 			inline UnorderedNames GetNames(const Reference<Scope>& target_, const Reference<Scope>& fromScope_, const It& fromIt_);
 			inline Names GetNames(const Reference<Scope>& fromScope_, const It& fromIt_);
 			// current position
-			inline void SetPosition(const Reference<Scope>& scope_, It* it_);
-			inline void ResetPosition(const Reference<Scope>& scope_);
+			inline void SetPosition(const Reference<MarkersContainer>& markersContainer_, It* it_);
+			inline void ResetPosition(const Reference<MarkersContainer>& markersContainer_);
 			// pending to parse
 			inline void AddToPendingToParse(const Reference<Scope>& scope_);
 			inline void RemoveFromPendingToParse(const Reference<Scope>& scope_);
@@ -837,17 +844,6 @@ namespace Nu
 #pragma region Nu
 
 #pragma region Parsing4
-
-/*
-#pragma region T
-
-Nu::Parsing4::T::T(const Reference<T>& this_):
-	Entity(this_)
-{
-}
-
-#pragma endregion
-*/
 
 #pragma region Marker
 
@@ -1110,6 +1106,7 @@ Nu::Parsing4::Scopes::Outer::Outer(const Reference<Outer>& this_):
 	markers.push_back(declarationBody);
 	markers.push_back(declarationMake);
 	markers.push_back(declarationCopy);
+	markers.push_back(declarationReturn);
 	markers.push_back(declarationNone);
 }
 
@@ -1121,6 +1118,7 @@ void Nu::Parsing4::Scopes::Outer::BindToContext(const Reference<Context>& contex
 	context_->SetValue(declarationBody, keywordBody);
 	context_->SetValue(declarationMake, keywordMake);
 	context_->SetValue(declarationCopy, keywordCopy);
+	context_->SetValue(declarationReturn, keywordReturn);
 	context_->SetValue(declarationNone, schemaNone);
 
 	context_->SetNoneSchema(schemaNone);
@@ -1331,6 +1329,21 @@ Nu::Parsing4::Commands::ResultInstance::ResultInstance(const Reference<ResultIns
 Nu::Reference<Nu::Parsing4::Scopes::Instance> Nu::Parsing4::Commands::ResultInstance::GetResult() const
 {
 	return result;
+}
+
+#pragma endregion
+
+#pragma region ReturnInstance
+
+Nu::Parsing4::Commands::ReturnInstance::ReturnInstance(const Reference<ReturnInstance>& this_, const Reference<Scopes::Instance>& instance_):
+	Command(this_),
+	instance(instance_)
+{
+}
+
+Nu::Reference<Nu::Parsing4::Scopes::Instance> Nu::Parsing4::Commands::ReturnInstance::GetInstance() const
+{
+	return instance;
 }
 
 #pragma endregion
@@ -1715,13 +1728,13 @@ Nu::Parsing4::Context::Names Nu::Parsing4::Context::GetNames(const Reference<Sco
 	return Move(ordered);
 }
 
-void Nu::Parsing4::Context::SetPosition(const Reference<Scope>& scope_, It* it_)
+void Nu::Parsing4::Context::SetPosition(const Reference<MarkersContainer>& markersContainer_, It* it_)
 {
-	currentPosition[scope_] = it_;
+	currentPosition[markersContainer_] = it_;
 }
-void Nu::Parsing4::Context::ResetPosition(const Reference<Scope>& scope_)
+void Nu::Parsing4::Context::ResetPosition(const Reference<MarkersContainer>& markersContainer_)
 {
-	currentPosition.erase(scope_);
+	currentPosition.erase(markersContainer_);
 }
 
 void Nu::Parsing4::Context::AddToPendingToParse(const Reference<Scope>& scope_)
@@ -1872,6 +1885,40 @@ Nu::Reference<Nu::Parsing4::Scopes::Root> Nu::Parsing4::Parser::Convert(const Re
 	auto root = Make<Scopes::Root>(markers);
 
 	return root;
+}
+Nu::Reference<Nu::Parsing4::Markers::SequenceReference> Nu::Parsing4::Parser::Convert(const Reference<Markers::Group>& group_, const Reference<Context>& context_)
+{
+	auto &markers = group_->GetMarkers();
+	
+	MarkersContainer::Markers newMarkers;
+
+	for (auto &marker : markers)
+	{
+		if (auto group = UpCast<Markers::Group>(marker))
+		{
+			auto sequenceReference = Convert(group, context_);
+
+			newMarkers.push_back(sequenceReference);
+		}
+		else
+		{
+			newMarkers.push_back(marker);
+		}
+	}
+
+	auto sequence = Make<Scopes::Sequence>(group_->GetOpening(), group_->GetClosing(), newMarkers);
+
+	for (auto &marker : markers)
+	{
+		if (auto sequenceReference = UpCast<Markers::SequenceReference>(marker))
+		{
+			context_->SetParent(sequenceReference->GetSequence(), sequence);
+		}
+	}
+
+	auto reference = Make<Markers::SequenceReference>(sequence);
+
+	return reference;
 }
 
 Nu::Parsing4::Parser::Parser(const Reference<Parser>& this_):
@@ -2407,8 +2454,29 @@ Nu::Reference<Nu::Parsing4::Scopes::Body> Nu::Parsing4::Parser::ExtractBodyDecla
 			if (group->GetOpening() == Markers::Group::BraceType::Figure && group->GetClosing() == Markers::Group::BraceType::Figure)
 			{
 				auto &markers = group->GetMarkers();
+				{
+					for (auto it = markers.begin(); it != markers.end(); ++it)
+					{
+						auto &marker = *it;
+
+						if (auto group = UpCast<Markers::Group>(marker))
+						{
+							auto sequenceReference = Convert(group, context);
+
+							marker = sequenceReference;
+						}
+					}
+				}
 				auto body = Make<Scopes::Body>(Move(markers));
 				{
+					for (auto &marker : body->GetMarkers())
+					{
+						if (auto sequenceReference = UpCast<Markers::SequenceReference>(marker))
+						{
+							context->SetParent(sequenceReference->GetSequence(), body);
+						}
+					}
+
 					context->SetParent(body, algorithm_);
 					context->AddToPendingToParse(body);
 
@@ -2555,15 +2623,249 @@ Nu::Reference<Nu::Parsing4::Commands::CreateInstance> Nu::Parsing4::Parser::Pars
 	return nullptr;
 }
 
+Nu::Reference<Nu::Parsing4::Commands::ReturnInstance> Nu::Parsing4::Parser::ExtractReturnInstanceCommand(Data& data_, It& it_, const Reference<Scopes::Body>& body_)
+{
+	auto o = it_;
+
+	if (auto keyword = ParseKeyword(data_, it_, body_, Keyword::Value::Return))
+	{
+		if (auto instance = ParseNamed<Scopes::Instance>(data_, it_, body_))
+		{
+			auto command = Make<Commands::ReturnInstance>(instance); // TODO: check if results types mathes
+
+			return Move(command);
+		}
+		else
+		{
+			throw NotImplementedException();
+		}
+	}
+
+	it_ = o;
+	return nullptr;
+}
+Nu::Reference<Nu::Parsing4::Commands::ReturnInstance> Nu::Parsing4::Parser::ParseReturnInstanceCommand(Data& data_, It& it_, const Reference<Scopes::Body>& body_)
+{
+	auto o = it_;
+
+	if (auto marker = ParseMarker<Commands::ReturnInstance>(data_, it_))
+	{
+		return marker;
+	}
+	else if (auto extracted = ExtractReturnInstanceCommand(data_, it_, body_))
+	{
+		MarkersContainer::Markers markers;
+		{
+			markers.push_back(extracted);
+		}
+
+		throw MarkersReplaceRequired(o, it_, markers);
+	}
+
+	it_ = o;
+	return nullptr;
+}
+
+Nu::Reference<Nu::Pair<Nu::Reference<Nu::Parsing4::Scopes::Sequence>, Nu::Parsing4::Commands::BraceAlgorithmCall::Arguments>> Nu::Parsing4::Parser::ParseBraceAlgorithmCallArguments(Data& data_, It& it_, const Reference<Scopes::Body>& body_)
+{
+	auto o = it_;
+
+	// if (auto group = ParseMarker<Markers::Group>(data_, it_))
+	if (auto sequence = ParseSequence(data_, it_, body_))
+	{
+		auto &markers = sequence->GetMarkers();
+
+		bool isChanged = false;
+		bool isSkipped = false;
+
+	begin:
+		auto it = markers.begin();
+
+		Commands::BraceAlgorithmCall::Arguments arguments;
+
+		context->SetPosition(sequence, &it);
+
+		while (it != markers.end())
+		{
+			try
+			{
+				if (arguments.empty())
+				{
+					if (auto namedInstance = ParseNamed<Scopes::Instance>(markers, it, sequence))
+					{
+						auto argument = Make<Commands::Arguments::CopyInstance>(namedInstance);
+						
+						arguments.push_back(argument);
+					}
+					else
+					{
+						throw Exception(); // TODO
+					}
+				}
+				else
+				{
+					if (auto comma = ParseSpecialToken<Lexing2::Special::Value::Comma>(markers, it))
+					{
+						if (auto namedInstance = ParseNamed<Scopes::Instance>(markers, it, sequence))
+						{
+							auto argument = Make<Commands::Arguments::CopyInstance>(namedInstance);
+
+							arguments.push_back(argument);
+						}
+						else
+						{
+							throw Exception(); // TODO
+						}
+					}
+					else
+					{
+						throw Exception(); // TODO
+					}
+				}
+			}
+			catch (MarkersReplaceRequired replace)
+			{
+				isChanged = true;
+				context->isChanged = true;
+
+				auto i = markers.erase(replace.begin, replace.end);
+
+				for (auto &m : replace.markers)
+				{
+					i = markers.insert(i, m);
+				}
+
+				goto begin; // it = markers.begin();
+			}
+			catch (MarkersSkipRequired skip)
+			{
+				isSkipped = true;
+				context->isSkipped = true;
+
+				it = skip.end;
+			}
+		}
+
+		context->ResetPosition(sequence);
+
+		if (!isSkipped)
+		{
+			context->isChanged = true;
+
+			return MakeReference<Pair<Reference<Scopes::Sequence>, Commands::BraceAlgorithmCall::Arguments>>(sequence, arguments);
+		}
+		else
+		{
+			throw NotImplementedException(); // TODO
+		}
+	}
+
+	it_ = o;
+	return nullptr;
+}
+
 Nu::Reference<Nu::Parsing4::Commands::BraceAlgorithmCall> Nu::Parsing4::Parser::ExtractBraceAlgorithmCall(Data& data_, It& it_, const Reference<Scopes::Body>& body_)
 {
 	auto o = it_;
+
+	auto isArgumentsMatch = [this](const Reference<Algorithms::Brace>& algorithm_, const Reference<Pair<Reference<Scopes::Sequence>, Commands::BraceAlgorithmCall::Arguments>> arguments_) -> bool
+	{
+		if (algorithm_->GetOpening() == arguments_->first->GetOpening() && algorithm_->GetClosing() == arguments_->first->GetClosing())
+		{
+			auto arguments = context->GetArguments(algorithm_);
+			
+			if (arguments.size() == arguments_->second.size())
+			{
+				for (Size i = 0; i < arguments.size(); ++i)
+				{
+					auto &expected = arguments[i];
+					auto &actual = arguments_->second[i];
+
+					if (auto expectedCopy = UpCast<Arguments::CopyInstance>(expected))
+					{
+						if (auto actualCopy = UpCast<Commands::Arguments::CopyInstance>(actual))
+						{
+							auto expectedSchema = context->GetSchema(expectedCopy->GetInstance());
+							auto actualSchema = context->GetSchema(actualCopy->GetInstance());
+
+							if (expectedSchema != actualSchema)
+							{
+								return false;
+							}
+						}
+						else
+						{
+							throw NotImplementedException();
+						}
+					}
+					else
+					{
+						throw NotImplementedException();
+					}
+				}
+
+				return true;
+			}
+		}
+
+		return false;
+	};
 
 	if (auto unit = ParseNamed(data_, it_, body_))
 	{
 		if (auto algorithmic = UpCast<AlgorithmsContainer>(unit))
 		{
-			if (auto sequence = ParseSequence(data_, it_, body_))
+			if (auto actualArguments = ParseBraceAlgorithmCallArguments(data_, it_, body_))
+			{
+				if (auto space = UpCast<Scopes::Space>(algorithmic))
+				{
+					if (context->IsInterfaceComplete(space)) // interface is declared
+					{
+						auto algorithms = context->GetAlgorithms(space);
+
+						for (auto &algorithm : algorithms)
+						{
+							if (auto braceAlgorithm = UpCast<Algorithms::Brace>(algorithm))
+							{
+								if (isArgumentsMatch(braceAlgorithm, actualArguments))
+								{
+									auto result = Make<Scopes::Instance>();
+									{
+										context->SetParent(result, body_);
+										context->SetSchema(result, braceAlgorithm->GetResult());
+									}
+
+									auto call = Make<Commands::BraceAlgorithmCall>(actualArguments->second, braceAlgorithm, result);
+
+									MarkersContainer::Markers markers;
+									{
+										markers.push_back(call);
+									}
+
+									throw MarkersReplaceRequired(o, it_, markers);
+								}
+							}
+						}
+
+						throw Exception(); // TODO
+					}
+					else
+					{
+						// TODO: skip
+						throw MarkersSkipRequired(o, it_);
+					}
+				}
+				else
+				{
+					throw NotImplementedException(); // TODO
+				}
+			}
+			else
+			{
+				throw NotImplementedException(); // TODO
+			}
+
+			/*if (auto sequence = ParseSequence(data_, it_, body_))
 			{
 				if (!context->IsPendingToParse(sequence))
 				{
@@ -2673,7 +2975,7 @@ Nu::Reference<Nu::Parsing4::Commands::BraceAlgorithmCall> Nu::Parsing4::Parser::
 				{
 					throw MarkersSkipRequired(o, it_);
 				}
-			}
+			}*/
 		}
 	}
 
@@ -2758,55 +3060,6 @@ Nu::Reference<Nu::Parsing4::Scopes::Sequence> Nu::Parsing4::Parser::ParseSequenc
 	it_ = o;
 	return nullptr;
 }
-
-/*
-Nu::Reference<Nu::Parsing4::Commands::CopyInstance> Nu::Parsing4::Parser::ExtractCopyInstanceCommand(Data& data_, It& it_, const Reference<Algorithm>& algorithm_)
-{
-	auto o = it_;
-
-	if (auto keyword = ParseKeyword(data_, it_, algorithm_, Keyword::Value::Copy))
-	{
-		if (auto schema = ParseNamed<Scopes::Schema>(data_, it_, algorithm_))
-		{
-			auto instance = Make<Scopes::Instance>();
-			{
-				context->SetParent(instance, algorithm_);
-			}
-			auto command = Make<Commands::CopyInstance>(instance);
-
-			return Move(command);
-		}
-		else
-		{
-			throw NotImplementedException();
-		}
-	}
-
-	it_ = o;
-	return nullptr;
-}
-Nu::Reference<Nu::Parsing4::Commands::CopyInstance> Nu::Parsing4::Parser::ParseCopyInstanceCommand(Data& data_, It& it_, const Reference<Algorithm>& algorithm_)
-{
-	auto o = it_;
-
-	if (auto marker = ParseMarker<Commands::CopyInstance>(data_, it_))
-	{
-		return marker;
-	}
-	else if (auto extracted = ExtractCopyInstanceCommand(data_, it_, algorithm_))
-	{
-		MarkersContainer::Markers markers;
-		{
-			markers.push_back(extracted);
-		}
-
-		throw MarkersReplaceRequired(o, it_, markers);
-	}
-
-	it_ = o;
-	return nullptr;
-}
-*/
 
 Nu::Reference<Nu::Parsing4::Keyword> Nu::Parsing4::Parser::ParseKeyword(Data& data_, It& it_, const Reference<Scope>& scope_, const Keyword::Value& value_)
 {
@@ -3073,14 +3326,29 @@ void Nu::Parsing4::Parser::ParseContent(const Reference<Algorithms::Brace>& algo
 begin:
 	it = markers.begin();
 	context->FlushBraceAlgorithmArguments(algorithm_);
+	Size argumentsCount = 0;
 	
 	while (it != markers.end())
 	{
 		try
 		{
+			if (argumentsCount > 0)
+			{
+				if (auto comma = ParseSpecialToken<Lexing2::Special::Value::Comma>(markers, it))
+				{
+					// do nothing
+				}
+				else
+				{
+					throw Exception();
+				}
+			}
+
 			if (auto argument = ParseArgument(markers, it, algorithm_))
 			{
 				context->SetBraceAlgorithmArgument(algorithm_, argument);
+				
+				++argumentsCount;
 			}
 			else if (auto declaration = ParseMarker<Markers::Declaration>(markers, it))
 			{
@@ -3091,6 +3359,8 @@ begin:
 				else if (auto argument = ParseArgument(markers, it, algorithm_))
 				{
 					context->SetBraceAlgorithmArgument(algorithm_, argument);
+					
+					++argumentsCount;
 
 					if (auto copyArgument = UpCast<Arguments::CopyInstance>(argument))
 					{
@@ -3165,6 +3435,10 @@ void Nu::Parsing4::Parser::ParseContent(const Reference<Scopes::Body>& body_)
 				// do nothing
 			}
 			else if (auto createInstance = ParseCreateInstanceCommand(markers, it, body_))
+			{
+				// do nothing
+			}
+			else if (auto returnInstance = ParseReturnInstanceCommand(markers, it, body_))
 			{
 				// do nothing
 			}
@@ -3299,15 +3573,19 @@ void Nu::Parsing4::Parser::ParseContent(const Reference<Scopes::Body>& body_)
 		context->isChanged = true;
 	}
 }
-void Nu::Parsing4::Parser::ParseContent(const Reference<Scopes::Sequence>& sequence_)
+/*void Nu::Parsing4::Parser::ParseContent(const Reference<Scopes::Sequence>& sequence_)
 {
 	auto &markers = sequence_->GetMarkers();
-	auto it = markers.begin();
-
-	context->SetPosition(sequence_, &it);
 
 	bool isChanged = false;
 	bool isSkipped = false;
+
+begin:
+	auto it = markers.begin();
+
+	context->SetPosition(sequence_, &it);
+	
+	Size argumentsCount = 0;
 
 	while (it != markers.end())
 	{
@@ -3315,14 +3593,36 @@ void Nu::Parsing4::Parser::ParseContent(const Reference<Scopes::Sequence>& seque
 		{
 			auto o = it;
 
-			if (false);
-			else if (auto instance = ParseNamed<Scopes::Instance>(markers, it, sequence_))
+			if (argumentsCount == 0)
 			{
-				// do nothing
+				if (auto instance = ParseNamed<Scopes::Instance>(markers, it, sequence_))
+				{
+					++argumentsCount;
+					// do nothing
+				}
+				else
+				{
+					throw Exception(); // TODO
+				}
 			}
 			else
 			{
-				throw Exception(); // TODO
+				if (auto comma = ParseSpecialToken<Lexing2::Special::Value::Comma>(markers, it))
+				{
+					if (auto instance = ParseNamed<Scopes::Instance>(markers, it, sequence_))
+					{
+						++argumentsCount;
+						// do nothing
+					}
+					else
+					{
+						throw Exception(); // TODO
+					}
+				}
+				else
+				{
+					throw Exception(); // TODO
+				}
 			}
 		}
 		catch (MarkersReplaceRequired replace)
@@ -3337,7 +3637,7 @@ void Nu::Parsing4::Parser::ParseContent(const Reference<Scopes::Sequence>& seque
 				i = markers.insert(i, m);
 			}
 
-			it = markers.begin();
+			goto begin; // it = markers.begin();
 		}
 		catch (MarkersSkipRequired skip)
 		{
@@ -3355,7 +3655,7 @@ void Nu::Parsing4::Parser::ParseContent(const Reference<Scopes::Sequence>& seque
 		context->RemoveFromPendingToParse(sequence_);
 		context->isChanged = true;
 	}
-}
+}*/
 
 Nu::Parsing4::Parser::Output Nu::Parsing4::Parser::Parse(const Input& input_)
 {
@@ -3410,10 +3710,10 @@ Nu::Parsing4::Parser::Output Nu::Parsing4::Parser::Parse(const Input& input_)
 				{
 					ParseContent(body);
 				}
-				else if (auto sequence = UpCast<Scopes::Sequence>(scope))
+				/*else if (auto sequence = UpCast<Scopes::Sequence>(scope))
 				{
 					ParseContent(sequence);
-				}
+				}*/
 				else
 				{
 					throw Exception(); // TODO

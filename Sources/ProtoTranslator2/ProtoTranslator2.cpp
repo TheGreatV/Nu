@@ -1,12 +1,18 @@
-#pragma once
+﻿#pragma once
 
 #pragma region Include
 
-#include <iostream>
 #include "Translator.hpp"
 #include <../Cleaner/Cleaner.hpp>
 #include <../Lexer2/Lexer.hpp>
 #include <../Parser4/Parser.hpp>
+
+#include <iostream>
+#include <fstream>
+#include <io.h>
+#include <fcntl.h>
+#include <clocale>
+#include <Windows.h>
 
 #pragma endregion
 
@@ -198,6 +204,23 @@ namespace Nu
 				{
 				}
 				inline virtual ~CreateInstance() override = default;
+			public:
+				inline virtual Reference<Translator2::Instance> GetInstance() const override
+				{
+					return instance;
+				}
+			};
+			class ReturnInstance:
+				public Entity,
+				public Translator2::Commands::ReturnInstance
+			{
+			protected:
+				const Reference<Instance> instance;
+			public:
+				inline ReturnInstance(const Reference<ReturnInstance>& this_, const Reference<Instance>& instance_): Entity(this_), instance(instance_)
+				{
+				}
+				inline virtual ~ReturnInstance() override = default;
 			public:
 				inline virtual Reference<Translator2::Instance> GetInstance() const override
 				{
@@ -462,6 +485,13 @@ namespace Nu
 
 										commands.push_back(createInstance);
 									}
+									else if (auto returnC = UpCast<Parsing4::Commands::ReturnInstance>(marker))
+									{
+										auto instance = instancesLookup[returnC->GetInstance()];
+										auto returnInstance = Make<Commands::ReturnInstance>(instance);
+
+										commands.push_back(returnInstance);
+									}
 									else if (auto callB = UpCast<Parsing4::Commands::BraceAlgorithmCall>(marker))
 									{
 										auto instance = instancesLookup[callB->GetResult()];
@@ -703,6 +733,12 @@ Nu::String Stringify(const Nu::Reference<Nu::ProtoTranslator2::Translator::Assem
 
 				output += "\t" + instancesNames[instance] + ": create " + schemasNames[MakeReference(instance->GetSchema())] + ";\n";
 			}
+			else if (auto ret = UpCast<Translator2::Commands::ReturnInstance>(command))
+			{
+				auto instance = ret->GetInstance();
+
+				output += "\treturn " + instancesNames[instance] + ";\n";
+			}
 			else if (auto callBrace = UpCast<Translator2::Commands::CallBraceAlgorithm>(command))
 			{
 				auto result = callBrace->GetResult();
@@ -759,7 +795,79 @@ Nu::String Stringify(const Nu::Reference<Nu::ProtoTranslator2::Translator::Assem
 }
 
 
-void main()
+void wmain(int argc, wchar_t* argv[])
+{
+	try
+	{
+		_setmode(_fileno(stdout), _O_WTEXT);
+
+		Nu::Size totalFilesCount = argc > 1
+			? static_cast<Nu::Size>(argc)-1
+			: 0;
+
+		std::wcout << L"total files count: " << totalFilesCount << std::endl;
+
+		Nu::Vector<Nu::WString> filenames(totalFilesCount);
+		{
+			for (std::size_t i = 0; i < totalFilesCount; ++i)
+			{
+				auto &filename = filenames[i];
+				auto &rawFilename = argv[i + 1];
+
+				filename = static_cast<Nu::WString>(rawFilename);
+			}
+		}
+
+		Nu::Map<Nu::WString, Nu::Lexing2::Lexer::Input> inputs;
+		{
+			for (auto &filename : filenames)
+			{
+				auto &input = inputs[filename];
+
+				// std::wcout << L"loading file \"" << filename << L"\"..." << std::endl;
+
+				std::ifstream file(filename);
+
+				std::getline(file, input, '\0');
+
+				// std::cout << "content: " << std::endl << input << std::endl;
+
+				file.close();
+			}
+		}
+
+		Nu::Lexing2::Lexer::Input totalInput;
+		{
+			for (auto &inputIt : inputs)
+			{
+				auto &input = inputIt.second;
+
+				totalInput += input;
+			}
+		}
+
+		auto translator = Nu::MakeReference<Nu::ProtoTranslator2::Translator>();
+		auto assembly = translator->Translate(totalInput);
+
+		auto output = Stringify(assembly);
+
+		std::ofstream file(L"output.η");
+		{
+			file.write(output.data(), output.size());
+
+			file.close();
+		}
+	}
+	catch (...)
+	{
+		std::cout << "Error" << std::endl;
+		
+		std::system("pause");
+	}
+}
+
+
+void main2()
 {
 	while (true)
 	{

@@ -2949,5 +2949,35 @@ namespace Testing
 				);
 			}
 		};
+
+		TEST_CLASS(Test)
+		{
+			TEST_METHOD(Parser_Test)
+			{
+				auto parser = Make<Parser>();
+				auto input = Make<Lexing2::Container>();
+				{
+					Lexing2::Container::Tokens algorithmContent;
+					{
+						algorithmContent.push_back(Make<Lexing2::Text>("copy"));
+						algorithmContent.push_back(Make<Lexing2::Text>("none"));
+					}
+
+					Lexing2::Container::Tokens schemaContent;
+					{
+						schemaContent.push_back(Make<Lexing2::Text>("algorithm"));
+						schemaContent.push_back(Make<Lexing2::Text>("none"));
+						schemaContent.push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Round, Lexing2::Group::BraceType::Round, algorithmContent));
+						schemaContent.push_back(Make<Lexing2::Text>("body"));
+						schemaContent.push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure));
+					}
+
+					input->GetTokens().push_back(Make<Lexing2::Text>("schema"));
+					input->GetTokens().push_back(Make<Lexing2::Group>(Lexing2::Group::BraceType::Figure, Lexing2::Group::BraceType::Figure, schemaContent));
+				}
+
+				auto output = parser->Parse(input);
+			}
+		};
 	}
 }
