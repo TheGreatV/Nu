@@ -2086,8 +2086,16 @@ Nu::Reference<Nu::Parsing4::Markers::Declaration> Nu::Parsing4::Parser::ProcessE
 								}
 								else
 								{
-									// TODO: splice
-									throw NotImplementedException();
+									// // TODO: splice
+									// throw NotImplementedException();
+									
+									auto markers = Data();
+									{
+										markers.push_back(Make<Markers::Token>(Make<Lexing2::Text>(nameValue)));
+										markers.push_back(Make<Markers::Token>(Make<Lexing2::Text>(value.substr(nameValue.size()))));
+									}
+
+									throw MarkersReplaceRequired(o, it_, markers);
 								}
 							}
 							else
@@ -2164,18 +2172,16 @@ Nu::Reference<Nu::Parsing4::Markers::Name> Nu::Parsing4::Parser::ExtractName(Dat
 					}
 					else
 					{
-						// TODO: splice
-						throw NotImplementedException();
+						// // TODO: splice
+						// throw NotImplementedException();
 
-						/*
 						auto markers = Data();
 						{
-							markers.push_back(Make<Token>(Make<Lexing2::Text>(nameValue)));
-							markers.push_back(Make<Token>(Make<Lexing2::Text>(value.substr(nameValue.size()))));
+							markers.push_back(Make<Markers::Token>(Make<Lexing2::Text>(nameValue)));
+							markers.push_back(Make<Markers::Token>(Make<Lexing2::Text>(value.substr(nameValue.size()))));
 						}
 
 						throw MarkersReplaceRequired(o, it_, markers);
-						*/
 					}
 				}
 				else
@@ -3061,10 +3067,7 @@ void Nu::Parsing4::Parser::ParseContent(const Reference<Scopes::Root>& root_)
 
 			auto i = markers.erase(replace.begin, replace.end);
 
-			for (auto &m : replace.markers)
-			{
-				i = markers.insert(i, m);
-			}
+			markers.insert(i, replace.markers.begin(), replace.markers.end());
 
 			it = markers.begin();
 		}
@@ -3154,10 +3157,7 @@ void Nu::Parsing4::Parser::ParseContent(const Reference<Scopes::Space>& space_)
 
 			auto i = markers.erase(replace.begin, replace.end);
 
-			for (auto &m : replace.markers)
-			{
-				i = markers.insert(i, m);
-			}
+			markers.insert(i, replace.markers.begin(), replace.markers.end());
 
 			it = markers.begin();
 		}
@@ -3208,10 +3208,7 @@ void Nu::Parsing4::Parser::ParseContent(const Reference<Scopes::Schema>& schema_
 
 			auto i = markers.erase(replace.begin, replace.end);
 
-			for (auto &m : replace.markers)
-			{
-				i = markers.insert(i, m);
-			}
+			markers.insert(i, replace.markers.begin(), replace.markers.end());
 
 			it = markers.begin();
 		}
@@ -3309,10 +3306,7 @@ begin:
 
 			auto i = markers.erase(replace.begin, replace.end);
 
-			for (auto &m : replace.markers)
-			{
-				i = markers.insert(i, m);
-			}
+			markers.insert(i, replace.markers.begin(), replace.markers.end());
 
 			goto begin; // it = markers.begin();
 		}
@@ -3468,10 +3462,7 @@ void Nu::Parsing4::Parser::ParseContent(const Reference<Scopes::Body>& body_)
 
 			auto i = markers.erase(replace.begin, replace.end);
 
-			for (auto &m : replace.markers)
-			{
-				i = markers.insert(i, m);
-			}
+			markers.insert(i, replace.markers.begin(), replace.markers.end());
 
 			it = markers.begin();
 		}
@@ -3492,89 +3483,6 @@ void Nu::Parsing4::Parser::ParseContent(const Reference<Scopes::Body>& body_)
 		context->isChanged = true;
 	}
 }
-/*void Nu::Parsing4::Parser::ParseContent(const Reference<Scopes::Sequence>& sequence_)
-{
-	auto &markers = sequence_->GetMarkers();
-
-	bool isChanged = false;
-	bool isSkipped = false;
-
-begin:
-	auto it = markers.begin();
-
-	context->SetPosition(sequence_, &it);
-	
-	Size argumentsCount = 0;
-
-	while (it != markers.end())
-	{
-		try
-		{
-			auto o = it;
-
-			if (argumentsCount == 0)
-			{
-				if (auto instance = ParseNamed<Scopes::Instance>(markers, it, sequence_))
-				{
-					++argumentsCount;
-					// do nothing
-				}
-				else
-				{
-					throw Exception(); // TODO
-				}
-			}
-			else
-			{
-				if (auto comma = ParseSpecialToken<Lexing2::Special::Value::Comma>(markers, it))
-				{
-					if (auto instance = ParseNamed<Scopes::Instance>(markers, it, sequence_))
-					{
-						++argumentsCount;
-						// do nothing
-					}
-					else
-					{
-						throw Exception(); // TODO
-					}
-				}
-				else
-				{
-					throw Exception(); // TODO
-				}
-			}
-		}
-		catch (MarkersReplaceRequired replace)
-		{
-			isChanged = true;
-			context->isChanged = true;
-
-			auto i = markers.erase(replace.begin, replace.end);
-
-			for (auto &m : replace.markers)
-			{
-				i = markers.insert(i, m);
-			}
-
-			goto begin; // it = markers.begin();
-		}
-		catch (MarkersSkipRequired skip)
-		{
-			isSkipped = true;
-			context->isSkipped = true;
-
-			it = skip.end;
-		}
-	}
-
-	context->ResetPosition(sequence_);
-
-	if (!isSkipped)
-	{
-		context->RemoveFromPendingToParse(sequence_);
-		context->isChanged = true;
-	}
-}*/
 
 Nu::Parsing4::Parser::Output Nu::Parsing4::Parser::Parse(const Input& input_)
 {

@@ -890,6 +890,12 @@ namespace Testing
 
 					// TODO
 				}
+				TEST_METHOD(Test5)
+				{
+					auto context = Parse("space{ algorithm none(copynone); }");
+
+					// TODO
+				}
 			};
 		}
 	}
