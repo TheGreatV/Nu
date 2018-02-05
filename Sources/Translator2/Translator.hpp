@@ -41,6 +41,7 @@ namespace Nu
 			namespace Arguments
 			{
 				class CopyInstance;
+				class CopyResultInstance;
 			}
 			class CreateInstance;
 			class CallAlgorithm;
@@ -170,6 +171,15 @@ namespace Nu
 				public:
 					inline virtual ~CopyInstance() = default;
 				public:
+					inline virtual Reference<Instance> GetInstance() const = 0;
+				};
+				class CopyResultInstance:
+					public Argument
+				{
+				public:
+					inline virtual ~CopyResultInstance() = default;
+				public:
+					inline virtual Reference<CallAlgorithm> GetAlgorithmCall() const = 0;
 					inline virtual Reference<Instance> GetInstance() const = 0;
 				};
 			}

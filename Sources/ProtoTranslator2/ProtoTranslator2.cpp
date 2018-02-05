@@ -192,6 +192,32 @@ namespace Nu
 						return instance;
 					}
 				};
+				class CopyResultInstance:
+					public Entity,
+					public Translator2::Commands::Arguments::CopyResultInstance
+				{
+				protected:
+					const Reference<Translator2::Commands::CallAlgorithm> callAlgorithm;
+					const Reference<Translator2::Instance> instance;
+				public:
+					inline CopyResultInstance(const Reference<CopyResultInstance>& this_, const Reference<Translator2::Commands::CallAlgorithm>& call_): Entity(this_), callAlgorithm(call_),
+						instance(UpCast<Results::ReturnInstance>(callAlgorithm->GetResult())
+							? UpCast<Results::ReturnInstance>(callAlgorithm->GetResult())->GetInstance()
+							: throw Exception() // TODO
+						)
+					{
+					}
+					inline virtual ~CopyResultInstance() = default;
+				public:
+					inline virtual Reference<Translator2::Commands::CallAlgorithm> GetAlgorithmCall() const override
+					{
+						return callAlgorithm;
+					}
+					inline virtual Reference<Translator2::Instance> GetInstance() const override
+					{
+						return instance;
+					}
+				};
 			}
 			class CreateInstance:
 				public Entity,
@@ -301,6 +327,34 @@ namespace Nu
 			Map<Reference<Parsing4::Scopes::Instance>, Reference<Instance>> instancesLookup;
 			Map<Reference<Parsing4::Algorithm>, Reference<Translator2::Algorithm>> algorithmsLookup;
 		protected:
+			inline void Collect(const Reference<Parsing4::Commands::AlgorithmCall>& call_)
+			{
+				if (auto &braceCall = UpCast<Parsing4::Commands::BraceAlgorithmCall>(call_))
+				{
+					auto instance = braceCall->GetResult();
+					
+					rawInstances.push_back(instance);
+
+					auto &arguments = braceCall->GetArguments();
+
+					for (auto &argument : arguments)
+					{
+						if (auto copyResult = UpCast<Parsing4::Commands::Arguments::CopyResultInstance>(argument))
+						{
+							auto instance = copyResult->GetInstance();
+							
+							rawInstances.push_back(instance);
+
+							auto result = copyResult->GetResult();
+
+							if (auto call = UpCast<Parsing4::Commands::AlgorithmCall>(result))
+							{
+								Collect(call);
+							}
+						}
+					}
+				}
+			}
 			inline void Collect(const Reference<Parsing4::Scopes::Body>& body_)
 			{
 				for (auto &marker : body_->GetMarkers())
@@ -311,12 +365,16 @@ namespace Nu
 
 						rawInstances.push_back(instance);
 					}
-					else if (auto &braceCall = UpCast<Parsing4::Commands::BraceAlgorithmCall>(marker))
+					else if (auto &call = UpCast<Parsing4::Commands::AlgorithmCall>(marker))
 					{
-						auto instance = braceCall->GetResult();
-
-						rawInstances.push_back(instance);
+						Collect(call);
 					}
+					// else if (auto &braceCall = UpCast<Parsing4::Commands::BraceAlgorithmCall>(marker))
+					// {
+					// 	auto instance = braceCall->GetResult();
+					// 
+					// 	rawInstances.push_back(instance);
+					// }
 				}
 			}
 			inline void Collect(const Reference<Parsing4::Algorithm>& algorithm_)
@@ -352,6 +410,17 @@ namespace Nu
 					throw Exception();
 				}
 			}
+			inline void Collect(const Reference<Parsing4::Scopes::Schema>& schema)
+			{
+				if (std::find(rawSchemas.begin(), rawSchemas.end(), schema) == rawSchemas.end())
+				{
+					rawSchemas.push_back(schema);
+				}
+				else
+				{
+					throw Exception();
+				}
+			}
 			inline void Collect(const Reference<Parsing4::Scopes::Space>& space)
 			{
 				for (auto &marker : space->GetMarkers())
@@ -361,6 +430,12 @@ namespace Nu
 						auto space = spaceR->GetSpace();
 
 						Collect(space);
+					}
+					else if (auto schemaD = UpCast<Parsing4::Markers::SchemaDeclaration>(marker))
+					{
+						auto schema = schemaD->GetSchema();
+
+						Collect(schema);
 					}
 					else if (auto algorithmR = UpCast<Parsing4::Markers::AlgorithmDeclaration>(marker))
 					{
@@ -372,8 +447,6 @@ namespace Nu
 			}
 			inline void Collect(const Reference<Parsing4::Scopes::Root>& root)
 			{
-				
-
 				for (auto &marker : root->GetMarkers())
 				{
 					if (auto spaceR = UpCast<Parsing4::Markers::SpaceDeclaration>(marker))
@@ -382,6 +455,58 @@ namespace Nu
 
 						Collect(space);
 					}
+					else if (auto schemaD = UpCast<Parsing4::Markers::SchemaDeclaration>(marker))
+					{
+						auto schema = schemaD->GetSchema();
+
+						Collect(schema);
+					}
+				}
+			}
+		protected:
+			inline Reference<Translator2::Commands::CallAlgorithm> Perform(const Reference<Parsing4::Commands::AlgorithmCall>& rawAlgorithmCall_)
+			{
+				if (auto rawBraceAlgorithmCall = UpCast<Parsing4::Commands::BraceAlgorithmCall>(rawAlgorithmCall_))
+				{
+					auto instance = instancesLookup[rawBraceAlgorithmCall->GetResult()];
+					auto result = Make<Commands::Results::ReturnInstance>(instance);
+
+					Commands::CallBraceAlgorithm::Arguments arguments;
+					{
+						for (auto &raw : rawBraceAlgorithmCall->GetArguments())
+						{
+							if (auto copyR = UpCast<Parsing4::Commands::Arguments::CopyResultInstance>(raw))
+							{
+								auto res = copyR->GetResult();
+
+								auto call = UpCast<Parsing4::Commands::AlgorithmCall>(res)
+									? Perform(UpCast<Parsing4::Commands::AlgorithmCall>(res))
+									: throw Exception(); // TODO
+
+								auto argument = Make<Commands::Arguments::CopyResultInstance>(call);
+
+								arguments.push_back(argument);
+							}
+							else if (auto copy = UpCast<Parsing4::Commands::Arguments::CopyInstance>(raw))
+							{
+								auto instance = instancesLookup[copy->GetInstance()];
+								auto argument = Make<Commands::Arguments::CopyInstance>(instance);
+
+								arguments.push_back(argument);
+							}
+						}
+					}
+
+					auto rawAlgorithm = rawBraceAlgorithmCall->GetAlgorithm();
+					auto algorithm = UpCast<Algorithms::Brace>(algorithmsLookup[rawAlgorithm]);
+
+					auto call = Make<Commands::CallBraceAlgorithm>(result, algorithm, arguments);
+
+					return call;
+				}
+				else
+				{
+					throw Exception();
 				}
 			}
 		public:
@@ -492,28 +617,9 @@ namespace Nu
 
 										commands.push_back(returnInstance);
 									}
-									else if (auto callB = UpCast<Parsing4::Commands::BraceAlgorithmCall>(marker))
+									else if (auto rawCall = UpCast<Parsing4::Commands::AlgorithmCall>(marker))
 									{
-										auto instance = instancesLookup[callB->GetResult()];
-										auto result = Make<Commands::Results::ReturnInstance>(instance);
-
-										Commands::CallBraceAlgorithm::Arguments arguments;
-										{
-											for (auto &raw : callB->GetArguments())
-											{
-												if (auto copy = UpCast<Parsing4::Commands::Arguments::CopyInstance>(raw))
-												{
-													auto instance = instancesLookup[copy->GetInstance()];
-													auto argument = Make<Commands::Arguments::CopyInstance>(instance);
-
-													arguments.push_back(argument);
-												}
-											}
-										}
-
-										auto algorithm = UpCast<Algorithms::Brace>(algorithmsLookup[rawB]);
-
-										auto call = Make<Commands::CallBraceAlgorithm>(result, algorithm, arguments);
+										auto call = Perform(rawCall);
 										
 										commands.push_back(call);
 									}
@@ -540,11 +646,7 @@ namespace Nu
 				// std::cout << "instances: " << instances.size() << std::endl;
 				// std::cout << "algorithms: " << algorithms.size() << std::endl;
 
-				return MakeReference<Assembly>(
-					schemas,
-					instances,
-					algorithms
-				);
+				return MakeReference<Assembly>(schemas, instances, algorithms);
 			}
 		};
 	}
@@ -563,29 +665,96 @@ namespace Nu
 #pragma endregion
 
 
+using namespace Nu;
+
+using SchemasNames = Map<Reference<Translator2::Schema>, String>;
+using InstancesNames = Map<Reference<Translator2::Instance>, String>;
+using AlgorithmsNames = Map<Reference<Translator2::Algorithm>, String>;
+
+void StringifyCall(String& output, const Reference<Translator2::Commands::CallAlgorithm>& call, SchemasNames& schemasNames, InstancesNames& instancesNames, AlgorithmsNames& algorithmsNames)
+{
+	if (auto callBrace = UpCast<Translator2::Commands::CallBraceAlgorithm>(call))
+	{
+		auto result = callBrace->GetResult();
+
+		if (auto returnInstance = UpCast<Translator2::Commands::Results::ReturnInstance>(result))
+		{
+			auto instance = returnInstance->GetInstance();
+			auto algorithm = callBrace->GetAlgorithm();
+			String argumentsNames;
+			{
+				auto arguments = callBrace->GetArguments();
+
+				bool t = false;
+
+				for (auto &argument : arguments)
+				{
+					if (t)
+					{
+						argumentsNames += ", ";
+					}
+					else
+					{
+						t = true;
+					}
+
+					if (auto copyResult = UpCast<Translator2::Commands::Arguments::CopyResultInstance>(argument))
+					{
+						auto call = copyResult->GetAlgorithmCall();
+						auto instance = copyResult->GetInstance();
+
+						StringifyCall(output, call, schemasNames, instancesNames, algorithmsNames);
+						
+						argumentsNames += instancesNames[instance];
+					}
+					else if (auto copyInstance = UpCast<Translator2::Commands::Arguments::CopyInstance>(argument))
+					{
+						auto instance = copyInstance->GetInstance();
+
+						argumentsNames += instancesNames[instance];
+					}
+					else
+					{
+						throw Exception();
+					}
+				}
+			}
+
+			output += "\t" + instancesNames[instance] + ": call " + algorithmsNames[algorithm] + "(" + argumentsNames + ");\n";
+		}
+		else
+		{
+			throw Exception();
+		}
+	}
+	else
+	{
+		throw Exception();
+	}
+}
+
+
 Nu::String Stringify(const Nu::Reference<Nu::ProtoTranslator2::Translator::Assembly>& assembly_)
 {
-	using namespace Nu;
-
 	auto &schemas = assembly_->schemas;
 	auto &instances = assembly_->instances;
 	auto &algorithms = assembly_->algorithms;
 	
-	Map<Reference<Translator2::Schema>, String> schemasNames;
+	SchemasNames schemasNames;
 	{
 		for (auto &schema : schemas)
 		{
 			schemasNames[schema] = "\"schema #" + std::to_string(schemasNames.size()) + "\"";
 		}
 	}
-	Map<Reference<Translator2::Instance>, String> instancesNames;
+	InstancesNames instancesNames;
 	{
 		for (auto &instance : instances)
 		{
 			instancesNames[instance] = "$" + std::to_string(instancesNames.size());
 		}
 	}
-	Map<Reference<Translator2::Algorithm>, String> algorithmsNames;
+	AlgorithmsNames algorithmsNames;
 	{
 		for (auto &algorithm : algorithms)
 		{
@@ -739,7 +908,11 @@ Nu::String Stringify(const Nu::Reference<Nu::ProtoTranslator2::Translator::Assem
 
 				output += "\treturn " + instancesNames[instance] + ";\n";
 			}
-			else if (auto callBrace = UpCast<Translator2::Commands::CallBraceAlgorithm>(command))
+			else if (auto call = UpCast<Translator2::Commands::CallAlgorithm>(command))
+			{
+				StringifyCall(output, call, schemasNames, instancesNames, algorithmsNames);
+			}
+			/*else if (auto callBrace = UpCast<Translator2::Commands::CallBraceAlgorithm>(command))
 			{
 				auto result = callBrace->GetResult();
 
@@ -770,6 +943,10 @@ Nu::String Stringify(const Nu::Reference<Nu::ProtoTranslator2::Translator::Assem
 
 								argumentsNames += instancesNames[instance];
 							}
+							else if (auto copyResult = UpCast<Translator2::Commands::Arguments::CopyResultInstance>(argument))
+							{
+								PerformNestedCall(output, copyResult);
+							}
 							else
 							{
 								throw Exception();
@@ -783,7 +960,11 @@ Nu::String Stringify(const Nu::Reference<Nu::ProtoTranslator2::Translator::Assem
 				{
 					throw Exception();
 				}
-			}
+			}*/
+			/*else
+			{
+				throw Exception();
+			}*/
 		}
 
 		output += "}\n";

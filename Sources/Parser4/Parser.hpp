@@ -77,6 +77,11 @@ namespace Nu
 		namespace Commands
 		{
 			class Argument;
+			namespace Arguments
+			{
+				class CopyInstance;
+				class CopyResultInstance;
+			}
 			class CreateInstance;
 			class CopyInstance;
 			class ResultInstance;
@@ -593,6 +598,21 @@ namespace Nu
 				public:
 					inline Reference<Scopes::Instance> GetInstance() const;
 				};
+				class CopyResultInstance:
+					public CopyInstance
+				{
+				protected:
+					const Reference<ResultInstance> result;
+				public:
+					inline CopyResultInstance() = delete;
+					inline CopyResultInstance(const Reference<CopyResultInstance>& this_, const Reference<ResultInstance>& result_);
+					inline CopyResultInstance(const CopyResultInstance&) = delete;
+					inline virtual ~CopyResultInstance() override = default;
+				public:
+					inline CopyResultInstance& operator = (const CopyResultInstance&) = delete;
+				public:
+					inline Reference<ResultInstance> GetResult() const;
+				};
 			};
 			class CreateInstance:
 				public Command
@@ -740,11 +760,11 @@ namespace Nu
 			inline Reference<Commands::ReturnInstance>								ExtractReturnInstanceCommand(Data& data_, It& it_, const Reference<Scopes::Body>& body_);
 			inline Reference<Commands::ReturnInstance>								ParseReturnInstanceCommand(Data& data_, It& it_, const Reference<Scopes::Body>& body_);
 
-			inline Reference<Pair<Reference<Scopes::Sequence>, Commands::BraceAlgorithmCall::Arguments>> ParseBraceAlgorithmCallArguments(Data& data_, It& it_, const Reference<Scopes::Body>& body_);
+			inline Reference<Pair<Reference<Scopes::Sequence>, Commands::BraceAlgorithmCall::Arguments>> ParseBraceAlgorithmCallArguments(Data& data_, It& it_, const Reference<Scope>& body_);
 			
-			inline Reference<Commands::BraceAlgorithmCall>							ExtractBraceAlgorithmCall(Data& data_, It& it_, const Reference<Scopes::Body>& body_);
-			inline Reference<Commands::BraceAlgorithmCall>							ParseBraceAlgorithmCall(Data& data_, It& it_, const Reference<Scopes::Body>& body_);
-			inline Reference<Commands::AlgorithmCall>								ParseAlgorithmCall(Data& data_, It& it_, const Reference<Scopes::Body>& body_);
+			inline Reference<Commands::BraceAlgorithmCall>							ExtractBraceAlgorithmCall(Data& data_, It& it_, const Reference<Scope>& body_);
+			inline Reference<Commands::BraceAlgorithmCall>							ParseBraceAlgorithmCall(Data& data_, It& it_, const Reference<Scope>& body_);
+			inline Reference<Commands::AlgorithmCall>								ParseAlgorithmCall(Data& data_, It& it_, const Reference<Scope>& body_);
 
 			inline Reference<Scopes::Sequence>										ExtractSequence(Data& data_, It& it_, const Reference<Scope>& scope_);
 			inline Reference<Scopes::Sequence>										ParseSequence(Data& data_, It& it_, const Reference<Scope>& scope_);
@@ -1312,6 +1332,21 @@ Nu::Parsing4::Commands::Arguments::CopyInstance::CopyInstance(const Reference<Co
 Nu::Reference<Nu::Parsing4::Scopes::Instance> Nu::Parsing4::Commands::Arguments::CopyInstance::GetInstance() const
 {
 	return instance;
+}
+
+#pragma endregion
+
+#pragma region CopyResultInstance
+
+Nu::Parsing4::Commands::Arguments::CopyResultInstance::CopyResultInstance(const Reference<CopyResultInstance>& this_, const Reference<ResultInstance>& result_):
+	CopyInstance(this_, result_->GetResult()),
+	result(result_)
+{
+}
+
+Nu::Reference<Nu::Parsing4::Commands::ResultInstance> Nu::Parsing4::Commands::Arguments::CopyResultInstance::GetResult() const
+{
+	return result;
 }
 
 #pragma endregion
@@ -1908,7 +1943,7 @@ Nu::Reference<Nu::Parsing4::Markers::SequenceReference> Nu::Parsing4::Parser::Co
 
 	auto sequence = Make<Scopes::Sequence>(group_->GetOpening(), group_->GetClosing(), newMarkers);
 
-	for (auto &marker : markers)
+	for (auto &marker : newMarkers)
 	{
 		if (auto sequenceReference = UpCast<Markers::SequenceReference>(marker))
 		{
@@ -2666,7 +2701,7 @@ Nu::Reference<Nu::Parsing4::Commands::ReturnInstance> Nu::Parsing4::Parser::Pars
 	return nullptr;
 }
 
-Nu::Reference<Nu::Pair<Nu::Reference<Nu::Parsing4::Scopes::Sequence>, Nu::Parsing4::Commands::BraceAlgorithmCall::Arguments>> Nu::Parsing4::Parser::ParseBraceAlgorithmCallArguments(Data& data_, It& it_, const Reference<Scopes::Body>& body_)
+Nu::Reference<Nu::Pair<Nu::Reference<Nu::Parsing4::Scopes::Sequence>, Nu::Parsing4::Commands::BraceAlgorithmCall::Arguments>> Nu::Parsing4::Parser::ParseBraceAlgorithmCallArguments(Data& data_, It& it_, const Reference<Scope>& body_)
 {
 	auto o = it_;
 
@@ -2689,38 +2724,33 @@ Nu::Reference<Nu::Pair<Nu::Reference<Nu::Parsing4::Scopes::Sequence>, Nu::Parsin
 		{
 			try
 			{
-				if (arguments.empty())
+				if (!arguments.empty())
 				{
-					if (auto namedInstance = ParseNamed<Scopes::Instance>(markers, it, sequence))
+					if (auto comma = ParseSpecialToken<Lexing2::Special::Value::Comma>(markers, it))
 					{
-						auto argument = Make<Commands::Arguments::CopyInstance>(namedInstance);
-						
-						arguments.push_back(argument);
+						// do nothing
 					}
 					else
 					{
 						throw Exception(); // TODO
 					}
 				}
+
+				if (auto namedInstance = ParseNamed<Scopes::Instance>(markers, it, sequence))
+				{
+					auto argument = Make<Commands::Arguments::CopyInstance>(namedInstance);
+						
+					arguments.push_back(argument);
+				}
+				else if (auto call = ParseAlgorithmCall(markers, it, sequence))
+				{
+					auto argument = Make<Commands::Arguments::CopyResultInstance>(call);
+
+					arguments.push_back(argument);
+				}
 				else
 				{
-					if (auto comma = ParseSpecialToken<Lexing2::Special::Value::Comma>(markers, it))
-					{
-						if (auto namedInstance = ParseNamed<Scopes::Instance>(markers, it, sequence))
-						{
-							auto argument = Make<Commands::Arguments::CopyInstance>(namedInstance);
-
-							arguments.push_back(argument);
-						}
-						else
-						{
-							throw Exception(); // TODO
-						}
-					}
-					else
-					{
-						throw Exception(); // TODO
-					}
+					throw Exception(); // TODO
 				}
 			}
 			catch (MarkersReplaceRequired replace)
@@ -2764,7 +2794,7 @@ Nu::Reference<Nu::Pair<Nu::Reference<Nu::Parsing4::Scopes::Sequence>, Nu::Parsin
 	return nullptr;
 }
 
-Nu::Reference<Nu::Parsing4::Commands::BraceAlgorithmCall> Nu::Parsing4::Parser::ExtractBraceAlgorithmCall(Data& data_, It& it_, const Reference<Scopes::Body>& body_)
+Nu::Reference<Nu::Parsing4::Commands::BraceAlgorithmCall> Nu::Parsing4::Parser::ExtractBraceAlgorithmCall(Data& data_, It& it_, const Reference<Scope>& body_)
 {
 	auto o = it_;
 
@@ -2982,7 +3012,7 @@ Nu::Reference<Nu::Parsing4::Commands::BraceAlgorithmCall> Nu::Parsing4::Parser::
 	it_ = o;
 	return nullptr;
 }
-Nu::Reference<Nu::Parsing4::Commands::BraceAlgorithmCall> Nu::Parsing4::Parser::ParseBraceAlgorithmCall(Data& data_, It& it_, const Reference<Scopes::Body>& body_)
+Nu::Reference<Nu::Parsing4::Commands::BraceAlgorithmCall> Nu::Parsing4::Parser::ParseBraceAlgorithmCall(Data& data_, It& it_, const Reference<Scope>& body_)
 {
 	auto o = it_;
 
@@ -3003,7 +3033,7 @@ Nu::Reference<Nu::Parsing4::Commands::BraceAlgorithmCall> Nu::Parsing4::Parser::
 	it_ = o;
 	return nullptr;
 }
-Nu::Reference<Nu::Parsing4::Commands::AlgorithmCall> Nu::Parsing4::Parser::ParseAlgorithmCall(Data& data_, It& it_, const Reference<Scopes::Body>& body_)
+Nu::Reference<Nu::Parsing4::Commands::AlgorithmCall> Nu::Parsing4::Parser::ParseAlgorithmCall(Data& data_, It& it_, const Reference<Scope>& body_)
 {
 	auto o = it_;
 
