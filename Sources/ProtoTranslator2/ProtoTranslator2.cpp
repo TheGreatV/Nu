@@ -978,7 +978,7 @@ Nu::String Stringify(const Nu::Reference<Nu::ProtoTranslator2::Translator::Assem
 
 void wmain(int argc, wchar_t* argv[])
 {
-	try
+	// try
 	{
 		_setmode(_fileno(stdout), _O_WTEXT);
 
@@ -1039,12 +1039,12 @@ void wmain(int argc, wchar_t* argv[])
 			file.close();
 		}
 	}
-	catch (...)
-	{
-		std::cout << "Error" << std::endl;
-		
-		std::system("pause");
-	}
+	// catch (...)
+	// {
+	// 	std::cout << "Error" << std::endl;
+	// 	
+	// 	std::system("pause");
+	// }
 }
 
 

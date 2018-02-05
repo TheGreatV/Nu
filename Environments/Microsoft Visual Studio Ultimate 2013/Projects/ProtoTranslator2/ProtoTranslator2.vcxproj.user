@@ -3,4 +3,8 @@
   <PropertyGroup>
     <ShowAllFiles>true</ShowAllFiles>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LocalDebuggerCommandArguments>"$(TargetDir)/source.ν"</LocalDebuggerCommandArguments>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+  </PropertyGroup>
 </Project>

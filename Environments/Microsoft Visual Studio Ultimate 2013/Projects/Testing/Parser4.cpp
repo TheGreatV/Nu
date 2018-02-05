@@ -884,6 +884,12 @@ namespace Testing
 
 					// TODO
 				}
+				TEST_METHOD(Test4)
+				{
+					auto context = Parse("x: space{ algorithm none(copy none) body { n: make none; x(x(n)) } }");
+
+					// TODO
+				}
 			};
 		}
 	}

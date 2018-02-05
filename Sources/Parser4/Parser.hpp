@@ -2786,7 +2786,8 @@ Nu::Reference<Nu::Pair<Nu::Reference<Nu::Parsing4::Scopes::Sequence>, Nu::Parsin
 		}
 		else
 		{
-			throw NotImplementedException(); // TODO
+			// throw NotImplementedException(); // TODO
+			SkipUntilDeclaration(data_, it_, o);
 		}
 	}
 
@@ -2892,120 +2893,8 @@ Nu::Reference<Nu::Parsing4::Commands::BraceAlgorithmCall> Nu::Parsing4::Parser::
 			}
 			else
 			{
-				throw NotImplementedException(); // TODO
+				// not algorithm call
 			}
-
-			/*if (auto sequence = ParseSequence(data_, it_, body_))
-			{
-				if (!context->IsPendingToParse(sequence))
-				{
-					if (auto space = UpCast<Scopes::Space>(algorithmic))
-					{
-						if (context->IsInterfaceComplete(space)) // interface is declared
-						{
-							auto algorithms = context->GetAlgorithms(space);
-
-							for (auto &algorithm : algorithms)
-							{
-								if (auto braceAlgorithm = UpCast<Algorithms::Brace>(algorithm))
-								{
-									auto isBraceMatch = braceAlgorithm->GetOpening() == sequence->GetOpening() && braceAlgorithm->GetClosing() == sequence->GetClosing();
-									auto isArgumentsMatch = true; // TODO: replace with some function?
-									auto arguments = Commands::BraceAlgorithmCall::Arguments();
-									{
-										auto &markers = sequence->GetMarkers();
-										auto it = markers.begin();
-
-										auto algorithmArguments = context->GetArguments(braceAlgorithm);
-
-										for (auto &argument : algorithmArguments)
-										{
-											if (it != markers.end())
-											{
-												auto &marker = *it;
-
-												if (auto copyInstance = UpCast<Arguments::CopyInstance>(argument))
-												{
-													if (auto name = UpCast<Markers::Name>(marker))
-													{
-														auto unit = name->GetUnit();
-
-														if (auto instance = UpCast<Scopes::Instance>(unit))
-														{
-															if (context->GetSchema(instance) == context->GetSchema(copyInstance->GetInstance()))
-															{
-																auto argument = Make<Commands::Arguments::CopyInstance>(instance);
-
-																arguments.push_back(argument);
-															}
-															else
-															{
-																isArgumentsMatch = false;
-																break;
-															}
-														}
-														else
-														{
-															throw NotImplementedException();
-														}
-													}
-													else
-													{
-														isArgumentsMatch = false;
-														break;
-													}
-												}
-												else
-												{
-													throw NotImplementedException();
-												}
-											}
-											else
-											{
-												isArgumentsMatch = false;
-												break;
-											}
-										}
-									}
-
-									if (isBraceMatch && isArgumentsMatch)
-									{
-										auto result = Make<Scopes::Instance>();
-										{
-											context->SetParent(result, body_);
-											context->SetSchema(result, braceAlgorithm->GetResult());
-										}
-
-										auto call = Make<Commands::BraceAlgorithmCall>(arguments, braceAlgorithm, result);
-
-										MarkersContainer::Markers markers;
-										{
-											markers.push_back(call);
-										}
-
-										throw MarkersReplaceRequired(o, it_, markers);
-									}
-								}
-							}
-
-							throw Exception(); // TODO
-						}
-						else
-						{
-							// TODO: skip
-							throw MarkersSkipRequired(o, it_);
-						}
-					}
-					else
-					{
-						throw NotImplementedException(); // TODO
-					}
-				}
-				else
-				{
-					throw MarkersSkipRequired(o, it_);
-				}
-			}*/
 		}
 	}
 
