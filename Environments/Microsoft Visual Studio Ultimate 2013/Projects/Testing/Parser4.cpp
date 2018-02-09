@@ -896,6 +896,36 @@ namespace Testing
 
 					// TODO
 				}
+				TEST_METHOD(Test6)
+				{
+					auto context = Parse("space{ a: algorithm none(); }");
+
+					// TODO
+				}
+				TEST_METHOD(Test7)
+				{
+					auto context = Parse("x: space { a: algorithm none() body { x.a(); } }");
+
+					// TODO
+				}
+				TEST_METHOD(Test8)
+				{
+					auto context = Parse("space { a: algorithm none() body { a(); } }");
+
+					// TODO
+				}
+				TEST_METHOD(Test9)
+				{
+					auto context = Parse("x: space { a: algorithm none() body { x.b(); } b: a; }");
+
+					// TODO
+				}
+				TEST_METHOD(Test10)
+				{
+					auto context = Parse("space { a: algorithm none() body { b(); }  b: a; }");
+
+					// TODO
+				}
 			};
 		}
 	}

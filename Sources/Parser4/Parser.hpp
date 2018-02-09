@@ -191,6 +191,7 @@ namespace Nu
 			{
 			protected:
 				const Reference<Unit> unit;
+				// const String value;
 			public:
 				inline Name() = delete;
 				inline Name(const Reference<Name>& this_, const Reference<Unit>& unit_);
@@ -200,6 +201,7 @@ namespace Nu
 				inline Name& operator = (const Name&) = delete;
 			public:
 				inline Reference<Unit> GetUnit() const;
+				// inline String GetValue() const;
 			};
 			class SpaceDeclaration:
 				public Marker
@@ -778,7 +780,7 @@ namespace Nu
 			inline void																ParseContent(const Reference<Scopes::Body>& body_);
 			inline void																ParseContent(const Reference<Scopes::Sequence>& sequence_);
 		public:
-			inline Output															Parse(const Input& input_);
+			inline Output															Parse(const Input& input_, const String& rootName_ = "root");
 		};
 		class Parser::MarkersReplaceRequired
 		{
@@ -812,6 +814,7 @@ namespace Nu
 			Vector<Reference<Scope>> pendingToParse;
 			Map<Reference<Unit>, Reference<Scope>> parentLookup;
 			Map<Reference<Markers::Declaration>, Reference<Unit>> valueLookup;
+			Map<Reference<Unit>, String> unitsNames;
 			Map<Reference<AlgorithmsContainer>, Vector<Reference<Algorithm>>> algorithmsLookup;
 			Map<Reference<Algorithms::Brace>, Size> braceAlgorithmArgumentIndex;
 			Map<Reference<Algorithms::Brace>, Vector<Reference<Argument>>> braceAlgorithmArguments;
@@ -856,6 +859,91 @@ namespace Nu
 			inline Vector<Reference<Scope>> GetPendingToParse();
 			inline bool IsPendingToParse(const Reference<Scope>& scope_) const;
 			inline bool IsInterfaceComplete(const Reference<Scopes::AlgorithmicScope>& algorithmic_);
+		public: // experimental
+			inline void SetUnitName(const Reference<Unit>& unit_, const String& name_)
+			{
+				auto it = unitsNames.find(unit_);
+
+				if (it == unitsNames.end())
+				{
+					unitsNames[unit_] = name_;
+				}
+				else
+				{
+					auto value = (*it).second;
+
+					if (name_ != value)
+					{
+						throw Exception(); // TODO
+					}
+				}
+			}
+			inline void SetUnitName(const Reference<Unit>& unit_, const Reference<Markers::Declaration>& declaration_)
+			{
+				auto it = unitsNames.find(unit_);
+				auto name = declaration_->GetValue();
+
+				if (it == unitsNames.end())
+				{
+					unitsNames[unit_] = name;
+				}
+				else
+				{
+					auto value = (*it).second;
+
+					if (name != value)
+					{
+						throw Exception(); // TODO
+					}
+				}
+			}
+			inline bool HasName(const Reference<Unit>& unit_)
+			{
+				auto it = unitsNames.find(unit_);
+
+				return it != unitsNames.end();
+			}
+			inline String GetUnitName(const Reference<Unit>& unit_)
+			{
+				auto it = unitsNames.find(unit_);
+
+				if (it != unitsNames.end())
+				{
+					auto &name = (*it).second;
+
+					return name;
+				}
+				else
+				{
+					static Size counter = 0;
+
+					auto name = ":" + std::to_string(counter++) + ":";
+
+					SetUnitName(unit_, name);
+
+					return name;
+				}
+			}
+			inline String GetFullUnitName(const Reference<Unit>& unit_)
+			{
+				String name = GetUnitName(unit_);
+
+				auto unit = unit_;
+
+				while (unit)
+				{
+					auto parent = GetParent(unit);
+
+					if (parent && !UpCast<Scopes::Outer>(parent))
+					{
+						name = GetUnitName(parent) + "." + name;
+					}
+
+					unit = !UpCast<Scopes::Outer>(parent) ? parent : nullptr;
+				}
+
+				return name;
+			}
 		};
 	}
 }
@@ -940,7 +1028,8 @@ Nu::Parsing4::Markers::Declaration::Value Nu::Parsing4::Markers::Declaration::Ge
 
 Nu::Parsing4::Markers::Name::Name(const Reference<Name>& this_, const Reference<Unit>& unit_):
 	Marker(this_),
-	unit(unit_)
+	unit(unit_) //,
+	// value("")
 {
 }
 
@@ -948,6 +1037,11 @@ Nu::Reference<Nu::Parsing4::Unit> Nu::Parsing4::Markers::Name::GetUnit() const
 {
 	return unit;
 }
+
+// Nu::String Nu::Parsing4::Markers::Name::GetValue() const
+// {
+// 	return value;
+// }
 
 #pragma endregion
 
@@ -1142,6 +1236,7 @@ void Nu::Parsing4::Scopes::Outer::BindToContext(const Reference<Context>& contex
 	context_->SetValue(declarationNone, schemaNone);
 
 	context_->SetNoneSchema(schemaNone);
+	context_->SetUnitName(schemaNone, "none");
 }
 
 #pragma endregion
@@ -2903,6 +2998,32 @@ Nu::Reference<Nu::Parsing4::Commands::BraceAlgorithmCall> Nu::Parsing4::Parser::
 			}
 		}
 	}
+	
+	it_ = o;
+
+	if (auto braceAlgorithm = ParseNamed<Algorithms::Brace>(data_, it_, body_))
+	{
+		if (auto actualArguments = ParseBraceAlgorithmCallArguments(data_, it_, body_))
+		{
+			if (isArgumentsMatch(braceAlgorithm, actualArguments))
+			{
+				auto result = Make<Scopes::Instance>();
+				{
+					context->SetParent(result, body_);
+					context->SetSchema(result, braceAlgorithm->GetResult());
+				}
+
+				auto call = Make<Commands::BraceAlgorithmCall>(actualArguments->second, braceAlgorithm, result);
+
+				MarkersContainer::Markers markers;
+				{
+					markers.push_back(call);
+				}
+
+				throw MarkersReplaceRequired(o, it_, markers);
+			}
+		}
+	}
 
 	it_ = o;
 	return nullptr;
@@ -3034,13 +3155,19 @@ void Nu::Parsing4::Parser::ParseContent(const Reference<Scopes::Root>& root_)
 				{
 					throw NotImplementedException(); // TODO: should we support this?
 				}
-				else if (auto space = ParseSpace(markers, it, root_))
+				else if (auto spaceDeclaration = ParseSpaceDeclaration(markers, it, root_))
 				{
+					auto space = spaceDeclaration->GetSpace();
+
 					context->SetValue(declaration, space);
+					context->SetUnitName(space, declaration);
 				}
-				else if (auto schema = ParseSchema(markers, it, root_))
+				else if (auto schemaDeclaration = ParseSchemaDeclaration(markers, it, root_))
 				{
+					auto schema = schemaDeclaration->GetSchema();
+
 					context->SetValue(declaration, schema);
+					context->SetUnitName(schema, declaration);
 				}
 				else if (auto keyword = ParseKeyword(markers, it, root_))
 				{
@@ -3124,13 +3251,26 @@ void Nu::Parsing4::Parser::ParseContent(const Reference<Scopes::Space>& space_)
 				{
 					throw NotImplementedException(); // TODO: should we support this?
 				}
-				else if (auto space = ParseSpace(markers, it, space_))
+				else if (auto spaceDeclaration = ParseSpaceDeclaration(markers, it, space_))
 				{
+					auto space = spaceDeclaration->GetSpace();
+
 					context->SetValue(declaration, space);
+					context->SetUnitName(space, declaration);
 				}
-				else if (auto schema = ParseSchema(markers, it, space_))
+				else if (auto schemaDeclaration = ParseSchemaDeclaration(markers, it, space_))
 				{
+					auto schema = schemaDeclaration->GetSchema();
+
 					context->SetValue(declaration, schema);
+					context->SetUnitName(schema, declaration);
+				}
+				else if (auto algorithmDeclaration = ParseFullAlgorithmDeclaration(markers, it, space_))
+				{
+					auto algorithm = algorithmDeclaration->GetAlgorithm();
+
+					context->SetValue(declaration, algorithm);
+					context->SetUnitName(algorithm, declaration);
 				}
 				else if (auto keyword = ParseKeyword(markers, it, space_))
 				{
@@ -3390,66 +3530,6 @@ void Nu::Parsing4::Parser::ParseContent(const Reference<Scopes::Body>& body_)
 			{
 				// do nothing
 			}
-			/*else if (auto call = ParseMarker<Commands::AlgorithmCall>(markers, it))
-			{
-				// do nothing
-			}
-			else if (auto unit = ParseNamed(markers, it, body_))
-			{
-				if (auto algorithmic = UpCast<AlgorithmsContainer>(unit))
-				{
-					if (auto group = ParseMarker<Markers::Group>(markers, it))
-					{
-						if (auto space = UpCast<Scopes::Space>(algorithmic))
-						{
-							if (context->IsInterfaceComplete(space)) // interface is declared
-							{
-								auto algorithms = context->GetAlgorithms(space);
-
-								for (auto &algorithm : algorithms)
-								{
-									if (auto braceAlgorithm = UpCast<Algorithms::Brace>(algorithm))
-									{
-										if (braceAlgorithm->GetOpening() == group->GetOpening() && braceAlgorithm->GetClosing() == group->GetClosing())
-										{
-											auto result = Make<Scopes::Instance>();
-											{
-												context->SetParent(result, body_);
-											}
-
-											auto call = Make<Commands::AlgorithmCall>(braceAlgorithm, result);
-
-											MarkersContainer::Markers markers;
-											{
-												markers.push_back(call);
-											}
-
-											throw MarkersReplaceRequired(o, it, markers);
-										}
-									}
-								}
-
-								throw Exception(); // TODO
-							}
-							else
-							{
-								// TODO: skip
-								throw MarkersSkipRequired(o, it);
-							}
-						}
-						else
-						{
-							throw Exception(); // TODO
-						}
-					}
-				}
-				else
-				{
-					throw Exception();
-				}
-				
-				// do nothing
-			}*/
 			else
 			{
 				throw Exception(); // TODO
@@ -3484,7 +3564,7 @@ void Nu::Parsing4::Parser::ParseContent(const Reference<Scopes::Body>& body_)
 	}
 }
 
-Nu::Parsing4::Parser::Output Nu::Parsing4::Parser::Parse(const Input& input_)
+Nu::Parsing4::Parser::Output Nu::Parsing4::Parser::Parse(const Input& input_, const String& rootName_)
 {
 	// prepare parsing context
 	context = MakeReference<Context>();
@@ -3499,6 +3579,7 @@ Nu::Parsing4::Parser::Output Nu::Parsing4::Parser::Parse(const Input& input_)
 	{
 		context->SetRoot(root);
 		context->SetParent(root, outer);
+		context->SetUnitName(root, rootName_);
 	}
 
 	// parse

@@ -1,0 +1,20 @@
+# schemas declarations
+schema "schema #0";
+
+# schemas definitions
+"schema #0": {
+};
+
+# algorithms declarations
+algorithm "none" 'algorithm #0'("schema #0");
+algorithm "none" 'algorithm #1'("schema #0");
+algorithm "none" 'algorithm #2'("schema #0");
+algorithm "schema #0" 'algorithm #3'("schema #0");
+
+
+# algorithms definitions
+'algorithm #0'($0): {
+};'algorithm #1'($0): {
+};'algorithm #2'($0): {
+};'algorithm #3'($0): {
+};

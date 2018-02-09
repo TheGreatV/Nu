@@ -6,6 +6,7 @@
 #include <../Cleaner/Cleaner.hpp>
 #include <../Lexer2/Lexer.hpp>
 #include <../Parser4/Parser.hpp>
+#include <../Eta/Eta.hpp>
 
 #include <iostream>
 #include <fstream>
@@ -290,11 +291,13 @@ namespace Nu
 				Vector<Reference<Translator2::Schema>> schemas;
 				Vector<Reference<Translator2::Instance>> instances;
 				Vector<Reference<Translator2::Algorithm>> algorithms;
+				Map<Reference<Entity>, String> names;
 				inline Assembly(
 					const Vector<Reference<Translator2::Schema>>& schemas_,
 					const Vector<Reference<Translator2::Instance>>& instances_,
-					const Vector<Reference<Translator2::Algorithm>>& algorithms_
-				): schemas(schemas_), instances(instances_), algorithms(algorithms_)
+					const Vector<Reference<Translator2::Algorithm>>& algorithms_,
+					const Map<Reference<Entity>, String>& names_
+				): schemas(schemas_), instances(instances_), algorithms(algorithms_), names(names_)
 				{
 				}
 			};
@@ -326,6 +329,7 @@ namespace Nu
 			Map<Reference<Parsing4::Scopes::Schema>, Reference<Schema>> schemasLookup;
 			Map<Reference<Parsing4::Scopes::Instance>, Reference<Instance>> instancesLookup;
 			Map<Reference<Parsing4::Algorithm>, Reference<Translator2::Algorithm>> algorithmsLookup;
+			Map<Reference<Entity>, String> names;
 		protected:
 			inline void Collect(const Reference<Parsing4::Commands::AlgorithmCall>& call_)
 			{
@@ -533,11 +537,17 @@ namespace Nu
 				// std::cout << "raw algorithms: " << rawAlgorithms.size() << std::endl;
 
 				// create new items
+				auto names = Map<Reference<Entity>, String>();
 				auto schemas = Vector<Reference<Translator2::Schema>>();
 				{
 					for (auto &raw : rawSchemas)
 					{
 						auto schema = Make<Schema>();
+
+						if (context->HasName(raw))
+						{
+							names[schema] = "\"" + context->GetFullUnitName(raw) + "\"";
+						}
 
 						schemas.push_back(schema);
 
@@ -551,6 +561,11 @@ namespace Nu
 						auto rawS = context->GetSchema(raw);
 						auto schema = schemasLookup[rawS]; // TODO: check != nullptr
 						auto instance = Make<Instance>(schema);
+
+						if (context->HasName(raw))
+						{
+							names[instance] = context->GetUnitName(raw);
+						}
 
 						instances.push_back(instance);
 
@@ -584,6 +599,11 @@ namespace Nu
 							}
 
 							auto algorithm = Make<Algorithms::Brace>(result, arguments, Convert(rawB->GetOpening()), Convert(rawB->GetClosing()));
+
+							if (context->HasName(raw))
+							{
+								names[algorithm] = "'" + context->GetFullUnitName(raw) + "'";
+							}
 
 							algorithms.push_back(algorithm);
 
@@ -646,7 +666,7 @@ namespace Nu
 				// std::cout << "instances: " << instances.size() << std::endl;
 				// std::cout << "algorithms: " << algorithms.size() << std::endl;
 
-				return MakeReference<Assembly>(schemas, instances, algorithms);
+				return MakeReference<Assembly>(schemas, instances, algorithms, names);
 			}
 		};
 	}
@@ -739,12 +759,22 @@ Nu::String Stringify(const Nu::Reference<Nu::ProtoTranslator2::Translator::Assem
 	auto &schemas = assembly_->schemas;
 	auto &instances = assembly_->instances;
 	auto &algorithms = assembly_->algorithms;
+	auto &names = assembly_->names;
 	
 	SchemasNames schemasNames;
 	{
 		for (auto &schema : schemas)
 		{
-			schemasNames[schema] = "\"schema #" + std::to_string(schemasNames.size()) + "\"";
+			auto x = UpCast<ProtoTranslator2::Entity>(schema);
+
+			if (names.find(x) != names.end()) // TODO: remove UpCast
+			{
+				schemasNames[schema] = names[x];
+			}
+			else
+			{
+				schemasNames[schema] = "\"schema #" + std::to_string(schemasNames.size()) + "\"";
+			}
 		}
 	}
 	InstancesNames instancesNames;
@@ -758,7 +788,16 @@ Nu::String Stringify(const Nu::Reference<Nu::ProtoTranslator2::Translator::Assem
 	{
 		for (auto &algorithm : algorithms)
 		{
-			algorithmsNames[algorithm] = "'algorithm #" + std::to_string(algorithmsNames.size()) + "'";
+			auto x = UpCast<ProtoTranslator2::Entity>(algorithm);
+
+			if (names.find(x) != names.end()) // TODO: remove UpCast
+			{
+				algorithmsNames[algorithm] = names[x];
+			}
+			else
+			{
+				algorithmsNames[algorithm] = "'algorithm #" + std::to_string(algorithmsNames.size()) + "'";
+			}
 		}
 	}
 
