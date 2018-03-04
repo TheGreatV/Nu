@@ -41,6 +41,7 @@
     <Import Project="..\..\Properties\[Nu] Parser3 - User.props" />
     <Import Project="..\..\Properties\[Nu] Parser4 - User.props" />
     <Import Project="..\..\Properties\[Nu] Eta - User.props" />
+    <Import Project="..\..\Properties\[Nu] Eta2 - User.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -48,6 +49,7 @@
     <Import Project="..\..\Properties\[Nu] Lexer2 - User.props" />
     <Import Project="..\..\Properties\[Nu] Parser3 - User.props" />
     <Import Project="..\..\Properties\[Nu] Eta - User.props" />
+    <Import Project="..\..\Properties\[Nu] Eta2 - User.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -96,6 +98,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Eta.cpp" />
+    <ClCompile Include="Eta2.cpp" />
     <ClCompile Include="Parser4.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

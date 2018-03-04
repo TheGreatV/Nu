@@ -573,6 +573,15 @@ namespace Testing
 
 					Assert::IsTrue(IsKeyword(markers[1], Keyword::Value::Return), L"");
 				}
+				TEST_METHOD(Parse_Keyword_Instruction)
+				{
+					auto context = Parse("x: instruction");
+					auto root = context->GetRoot();
+
+					auto markers = ToVector(root->GetMarkers());
+
+					Assert::IsTrue(IsKeyword(markers[1], Keyword::Value::Instruction), L"");
+				}
 				TEST_METHOD(Parse_Keyword_None)
 				{
 					auto context = Parse("x: none");
@@ -838,6 +847,12 @@ namespace Testing
 					Assert::IsTrue(IsCommand<Commands::CreateInstance>(markers[0]), L"");
 				}
 			public:
+				TEST_METHOD(Parse_SpaceBraceAlgorithmBody_SingleArgument_Instruction)
+				{
+					auto context = Parse("space { algorithm none(instruction); }");
+
+					// TODO
+				}
 				TEST_METHOD(Parse_SpaceBraceAlgorithmBody_SingleBraceAlgorithmCall_EmptyArguments)
 				{
 					auto context = Parse("x: space { algorithm none() body { x() } }");
@@ -855,6 +870,12 @@ namespace Testing
 				TEST_METHOD(Parse_SpaceBraceAlgorithmBody_SingleBraceAlgorithmCall_SingleArgument)
 				{
 					auto context = Parse("x: space { algorithm none(copy none) body { n: make none; x(n); } }");
+
+					// TODO
+				}
+				TEST_METHOD(Parse_SpaceBraceAlgorithmBody_SingleBraceAlgorithmCall_SingleArgument_Instruction_Instance)
+				{
+					auto context = Parse("x: space { algorithm none(instruction) body { n: make none; x(n); } }");
 
 					// TODO
 				}

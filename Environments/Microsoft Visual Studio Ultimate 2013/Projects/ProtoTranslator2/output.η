@@ -1,0 +1,30 @@
+# schemas declarations
+schema "none";
+schema "root.int";
+
+# schemas definitions
+"none": {};
+"root.int": {};
+
+# algorithms declarations
+algorithm "root.int" 'root.add.int&int'("root.int", "root.int");
+algorithm "none" 'root.assign.int=int'("root.int", "root.int");
+algorithm "root.int" 'algorithm #2'("root.int", "root.int", "root.int");
+algorithm "none" 'root.main.entry'();
+
+# algorithms definitions
+'root.add.int&int': ($0, $1) {
+};
+'root.assign.int=int': ($2, $3) {
+};
+'algorithm #2': ($7, $8, $9) {
+	$6: call 'root.add.int&int'($8, $9);
+	$4: call 'root.add.int&int'($7, $6);
+	return $4;
+};
+'root.main.entry': () {
+	$10: create "root.int";
+	$11: create "root.int";
+	$12: call 'root.assign.int=int'($10, $11);
+};
+

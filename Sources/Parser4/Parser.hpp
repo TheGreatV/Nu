@@ -304,6 +304,7 @@ namespace Nu
 				Make,
 				Copy,
 				Return,
+				Instruction,
 			};
 		protected:
 			const Value value;
@@ -397,6 +398,7 @@ namespace Nu
 				const Reference<Parsing4::Markers::Declaration> declarationMake = Make<Parsing4::Markers::Declaration>("make");
 				const Reference<Parsing4::Markers::Declaration> declarationCopy = Make<Parsing4::Markers::Declaration>("copy");
 				const Reference<Parsing4::Markers::Declaration> declarationReturn = Make<Parsing4::Markers::Declaration>("return");
+				const Reference<Parsing4::Markers::Declaration> declarationInstruction = Make<Parsing4::Markers::Declaration>("instruction");
 				const Reference<Parsing4::Markers::Declaration> declarationNone = Make<Parsing4::Markers::Declaration>("none");
 				const Reference<Keyword> keywordSpace = Make<Keyword>(Keyword::Value::Space);
 				const Reference<Keyword> keywordSchema = Make<Keyword>(Keyword::Value::Schema);
@@ -405,6 +407,7 @@ namespace Nu
 				const Reference<Keyword> keywordMake = Make<Keyword>(Keyword::Value::Make);
 				const Reference<Keyword> keywordCopy = Make<Keyword>(Keyword::Value::Copy);
 				const Reference<Keyword> keywordReturn = Make<Keyword>(Keyword::Value::Return);
+				const Reference<Keyword> keywordInstruction = Make<Keyword>(Keyword::Value::Instruction);
 				const Reference<Scopes::Schema> schemaNone = Make<Scopes::Schema>();
 			public:
 				inline Outer() = delete;
@@ -558,6 +561,17 @@ namespace Nu
 			public:
 				inline Reference<Scopes::Instance> GetInstance() const;
 			};
+			class Instruction:
+				public Argument
+			{
+			public:
+				inline Instruction() = delete;
+				inline Instruction(const Reference<Instruction>& this_);
+				inline Instruction(const Instruction&) = delete;
+				inline virtual ~Instruction() override = default;
+			public:
+				inline Instruction& operator = (const Instruction&) = delete;
+			};
 		}
 		class Command:
 			public Marker
@@ -614,6 +628,19 @@ namespace Nu
 					inline CopyResultInstance& operator = (const CopyResultInstance&) = delete;
 				public:
 					inline Reference<ResultInstance> GetResult() const;
+				};
+				class Instruction:
+					public Argument
+				{
+				protected:
+					const Reference<Entity> entity;
+				public:
+					inline Instruction() = delete;
+					inline Instruction(const Reference<Instruction>& this_, const Reference<Entity>& entity_);
+					inline Instruction(const Instruction&) = delete;
+					inline virtual ~Instruction() override = default;
+				public:
+					inline Instruction& operator = (const Instruction&) = delete;
 				};
 			};
 			class CreateInstance:
@@ -681,6 +708,8 @@ namespace Nu
 			{
 			public:
 				using Arguments = Vector<Reference<Argument>>;
+			public:
+				static Arguments Prepare(const Reference<Context>& context_, const Reference<Algorithms::Brace>& algorithm_, const Arguments& arguments_);
 			protected:
 				const Arguments arguments;
 			public:
@@ -754,6 +783,8 @@ namespace Nu
 			// arguments
 			inline Reference<Arguments::CopyInstance>								ExtractCopyInstanceArgument(Data& data_, It& it_, const Reference<Algorithm>& algorithm_);
 			inline Reference<Arguments::CopyInstance>								ParseCopyInstanceArgument(Data& data_, It& it_, const Reference<Algorithm>& algorithm_);
+			inline Reference<Arguments::Instruction>								ExtractInstructionArgument(Data& data_, It& it_, const Reference<Algorithm>& algorithm_);
+			inline Reference<Arguments::Instruction>								ParseInstructionArgument(Data& data_, It& it_, const Reference<Algorithm>& algorithm_);
 			inline Reference<Argument>												ParseArgument(Data& data_, It& it_, const Reference<Algorithm>& algorithm_);
 			// commands
 			inline Reference<Commands::CreateInstance>								ExtractCreateInstanceCommand(Data& data_, It& it_, const Reference<Scopes::Body>& body_);
@@ -830,6 +861,7 @@ namespace Nu
 			inline Reference<Scopes::Schema> GetNoneSchema() const;
 			inline void SetNoneSchema(const Reference<Scopes::Schema>& schema_);
 			// parenthood
+			inline bool HasParent(const Reference<Unit>& unit_) const;
 			inline void SetParent(const Reference<Unit>& unit_, const Reference<Scope>& scope_);
 			inline Reference<Scope> GetParent(const Reference<Unit>& unit_);
 			inline bool IsChild(const Reference<Unit>& unit_, const Reference<Scope>& scope_);
@@ -932,14 +964,21 @@ namespace Nu
 
 				while (unit)
 				{
-					auto parent = GetParent(unit);
-
-					if (parent && !UpCast<Scopes::Outer>(parent))
+					if (HasParent(unit))
 					{
-						name = GetUnitName(parent) + "." + name;
-					}
+						auto parent = GetParent(unit);
 
-					unit = !UpCast<Scopes::Outer>(parent) ? parent : nullptr;
+						if (parent && !UpCast<Scopes::Outer>(parent))
+						{
+							name = GetUnitName(parent) + "." + name;
+						}
+
+						unit = !UpCast<Scopes::Outer>(parent) ? parent : nullptr;
+					}
+					else
+					{
+						break;
+					}
 				}
 
 				return name;
@@ -1221,6 +1260,7 @@ Nu::Parsing4::Scopes::Outer::Outer(const Reference<Outer>& this_):
 	markers.push_back(declarationMake);
 	markers.push_back(declarationCopy);
 	markers.push_back(declarationReturn);
+	markers.push_back(declarationInstruction);
 	markers.push_back(declarationNone);
 }
 
@@ -1233,6 +1273,7 @@ void Nu::Parsing4::Scopes::Outer::BindToContext(const Reference<Context>& contex
 	context_->SetValue(declarationMake, keywordMake);
 	context_->SetValue(declarationCopy, keywordCopy);
 	context_->SetValue(declarationReturn, keywordReturn);
+	context_->SetValue(declarationInstruction, keywordInstruction);
 	context_->SetValue(declarationNone, schemaNone);
 
 	context_->SetNoneSchema(schemaNone);
@@ -1377,6 +1418,15 @@ Nu::Reference<Nu::Parsing4::Scopes::Instance> Nu::Parsing4::Arguments::CopyInsta
 
 #pragma endregion
 
+#pragma region Instruction
+
+Nu::Parsing4::Arguments::Instruction::Instruction(const Reference<Instruction>& this_):
+	Argument(this_)
+{
+}
+
+#pragma endregion
+
 #pragma endregion
 
 #pragma region Command
@@ -1446,6 +1496,16 @@ Nu::Reference<Nu::Parsing4::Commands::ResultInstance> Nu::Parsing4::Commands::Ar
 
 #pragma endregion
 
+#pragma region Instruction
+
+Nu::Parsing4::Commands::Arguments::Instruction::Instruction(const Reference<Instruction>& this_, const Reference<Entity>& entity_):
+	Argument(this_),
+	entity(entity_)
+{
+}
+
+#pragma endregion
+
 #pragma endregion
 
 #pragma region ResultInstance
@@ -1494,6 +1554,63 @@ Nu::Reference<Nu::Parsing4::Algorithm> Nu::Parsing4::Commands::AlgorithmCall::Ge
 #pragma endregion
 
 #pragma region BraceAlgorithmCall
+
+Nu::Parsing4::Commands::BraceAlgorithmCall::Arguments Nu::Parsing4::Commands::BraceAlgorithmCall::Prepare(const Reference<Context>& context_, const Reference<Algorithms::Brace>& algorithm_, const Arguments& arguments_)
+{
+	Arguments arguments(arguments_.size());
+
+	auto expectedArguments = context_->GetArguments(algorithm_);
+
+	for (Size i = 0; i < arguments_.size(); ++i)
+	{
+		auto &expected = expectedArguments[i];
+		auto &actual = arguments_[i];
+		auto &result = arguments[i];
+
+		if (auto expectedCopy = UpCast<Parsing4::Arguments::CopyInstance>(expected))
+		{
+			if (auto actualCopy = UpCast<Commands::Arguments::CopyInstance>(actual))
+			{
+				auto expectedSchema = context_->GetSchema(expectedCopy->GetInstance());
+				auto actualSchema = context_->GetSchema(actualCopy->GetInstance());
+
+				if (expectedSchema == actualSchema)
+				{
+					result = actualCopy;
+				}
+				else
+				{
+					throw Exception();
+				}
+			}
+			else
+			{
+				throw NotImplementedException();
+			}
+		}
+		else if (auto expectedInstruction = UpCast<Parsing4::Arguments::Instruction>(expected))
+		{
+			if (auto actualCopy = UpCast<Commands::Arguments::CopyInstance>(actual))
+			{
+				result = actualCopy;
+			}
+			else if (auto actualCopyResult = UpCast<Commands::Arguments::CopyResultInstance>(actual))
+			{
+				result = actualCopyResult;
+			}
+			else
+			{
+				throw NotImplementedException();
+			}
+		}
+		else
+		{
+			throw NotImplementedException();
+		}
+	}
+
+	return Move(arguments);
+}
 
 Nu::Parsing4::Commands::BraceAlgorithmCall::BraceAlgorithmCall(const Reference<BraceAlgorithmCall>& this_, const Arguments& arguments_, const Reference<Algorithms::Brace>& algorithm_, const Reference<Scopes::Instance>& result_):
 	AlgorithmCall(this_, algorithm_, result_),
@@ -1558,6 +1675,12 @@ void Nu::Parsing4::Context::SetNoneSchema(const Reference<Scopes::Schema>& schem
 	noneSchema = schema_;
 }
 
+bool Nu::Parsing4::Context::HasParent(const Reference<Unit>& unit_) const
+{
+	auto it = parentLookup.find(unit_);
+
+	return it != parentLookup.end();
+}
 void Nu::Parsing4::Context::SetParent(const Reference<Unit>& unit_, const Reference<Scope>& scope_)
 {
 	auto it = parentLookup.find(unit_);
@@ -2698,6 +2821,41 @@ Nu::Reference<Nu::Parsing4::Arguments::CopyInstance> Nu::Parsing4::Parser::Parse
 	it_ = o;
 	return nullptr;
 }
+Nu::Reference<Nu::Parsing4::Arguments::Instruction> Nu::Parsing4::Parser::ExtractInstructionArgument(Data& data_, It& it_, const Reference<Algorithm>& algorithm_)
+{
+	auto o = it_;
+
+	if (auto keyword = ParseKeyword(data_, it_, algorithm_, Keyword::Value::Instruction))
+	{
+		auto argument = Make<Arguments::Instruction>();
+
+		return Move(argument);
+	}
+
+	it_ = o;
+	return nullptr;
+}
+Nu::Reference<Nu::Parsing4::Arguments::Instruction> Nu::Parsing4::Parser::ParseInstructionArgument(Data& data_, It& it_, const Reference<Algorithm>& algorithm_)
+{
+	auto o = it_;
+
+	if (auto marker = ParseMarker<Arguments::Instruction>(data_, it_))
+	{
+		return marker;
+	}
+	else if (auto extracted = ExtractInstructionArgument(data_, it_, algorithm_))
+	{
+		MarkersContainer::Markers markers;
+		{
+			markers.push_back(extracted);
+		}
+
+		throw MarkersReplaceRequired(o, it_, markers);
+	}
+
+	it_ = o;
+	return nullptr;
+}
 Nu::Reference<Nu::Parsing4::Argument> Nu::Parsing4::Parser::ParseArgument(Data& data_, It& it_, const Reference<Algorithm>& algorithm_)
 {
 	auto o = it_;
@@ -2705,6 +2863,10 @@ Nu::Reference<Nu::Parsing4::Argument> Nu::Parsing4::Parser::ParseArgument(Data& 
 	if (auto copy = ParseCopyInstanceArgument(data_, it_, algorithm_))
 	{
 		return copy;
+	}
+	else if (auto instruction = ParseInstructionArgument(data_, it_, algorithm_))
+	{
+		return instruction;
 	}
 
 	it_ = o;
@@ -2930,6 +3092,21 @@ Nu::Reference<Nu::Parsing4::Commands::BraceAlgorithmCall> Nu::Parsing4::Parser::
 							throw NotImplementedException();
 						}
 					}
+					else if (auto expectedInstruction = UpCast<Arguments::Instruction>(expected))
+					{
+						if (auto actualCopy = UpCast<Commands::Arguments::CopyInstance>(actual))
+						{
+							// TODO
+						}
+						else if (auto actualCopyResult = UpCast<Commands::Arguments::CopyResultInstance>(actual))
+						{
+							// TODO
+						}
+						else
+						{
+							throw NotImplementedException();
+						}
+					}
 					else
 					{
 						throw NotImplementedException();
@@ -2967,7 +3144,7 @@ Nu::Reference<Nu::Parsing4::Commands::BraceAlgorithmCall> Nu::Parsing4::Parser::
 										context->SetSchema(result, braceAlgorithm->GetResult());
 									}
 
-									auto call = Make<Commands::BraceAlgorithmCall>(actualArguments->second, braceAlgorithm, result);
+									auto call = Make<Commands::BraceAlgorithmCall>(Commands::BraceAlgorithmCall::Prepare(context, braceAlgorithm, actualArguments->second), braceAlgorithm, result);
 
 									MarkersContainer::Markers markers;
 									{

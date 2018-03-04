@@ -7,6 +7,7 @@
 #include <../Lexer2/Lexer.hpp>
 #include <../Parser4/Parser.hpp>
 #include <../Eta/Eta.hpp>
+#include <../Translator-C/Translator-C.hpp>
 
 #include <iostream>
 #include <fstream>
@@ -105,6 +106,16 @@ namespace Nu
 				{
 					return instance;
 				}
+			};
+			class Instruction:
+				public Entity,
+				public Translator2::Arguments::Instruction
+			{
+			public:
+				inline Instruction(const Reference<Instruction>& this_): Entity(this_)
+				{
+				}
+				inline virtual ~Instruction() override = default;
 			};
 		}
 		namespace Algorithms
@@ -591,6 +602,13 @@ namespace Nu
 
 										arguments.push_back(copyArgument);
 									}
+									else if (auto instruction = UpCast<Parsing4::Arguments::Instruction>(arg))
+									{
+										// TODO
+										auto instructionArgument = Make<Arguments::Instruction>();
+
+										arguments.push_back(instructionArgument);
+									}
 									else
 									{
 										throw Exception(); // TODO
@@ -869,6 +887,10 @@ Nu::String Stringify(const Nu::Reference<Nu::ProtoTranslator2::Translator::Assem
 
 						argumentsNames += schemasNames[schema];
 					}
+					else if (auto instruction = UpCast<Translator2::Arguments::Instruction>(argument))
+					{
+						argumentsNames += "%"; // TODO
+					}
 					else
 					{
 						throw Exception();
@@ -916,6 +938,10 @@ Nu::String Stringify(const Nu::Reference<Nu::ProtoTranslator2::Translator::Assem
 						auto instance = copyInstance->GetInstance();
 
 						argumentsNames += instancesNames[instance];
+					}
+					else if (auto instruction = UpCast<Translator2::Arguments::Instruction>(argument))
+					{
+						argumentsNames += "%"; // TODO
 					}
 					else
 					{
@@ -1006,7 +1032,7 @@ Nu::String Stringify(const Nu::Reference<Nu::ProtoTranslator2::Translator::Assem
 			}*/
 		}
 
-		output += "}\n";
+		output += "};\n";
 	}
 
 	output += "\n";
@@ -1069,13 +1095,24 @@ void wmain(int argc, wchar_t* argv[])
 		auto translator = Nu::MakeReference<Nu::ProtoTranslator2::Translator>();
 		auto assembly = translator->Translate(totalInput);
 
-		auto output = Stringify(assembly);
+		auto outputEta = Stringify(assembly);
 
-		std::ofstream file(L"output.η");
+		std::ofstream fileEta(L"output.η");
 		{
-			file.write(output.data(), output.size());
+			fileEta.write(outputEta.data(), outputEta.size());
+			fileEta.close();
+		}
 
-			file.close();
+		auto parserEta = Eta::Parser();
+		auto assemblyEta = parserEta.Parse(outputEta);
+
+		auto translatorC = Translator_C::Translator();
+		auto outputC = translatorC.Translate(assemblyEta);
+
+		std::ofstream fileC(L"output.c");
+		{
+			fileC.write(outputC.data(), outputC.size());
+			fileC.close();
 		}
 	}
 	// catch (...)

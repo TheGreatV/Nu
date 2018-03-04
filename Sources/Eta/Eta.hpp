@@ -20,16 +20,21 @@ namespace Nu
 			inline Entity(const Reference<Entity>& this_);
 			virtual ~Entity() override = default;
 		};
-		class Schema
+		class Schema:
+			public Entity
 		{
+		public:
+			inline Schema(const Reference<Schema>& this_): Entity(this_)
+			{
+			}
 		};
-		class Instance
+		class Instance:
+			public Entity
 		{
 		public:
 			const Reference<Schema> schema;
 		public:
-			inline Instance(const Reference<Schema>& schema_):
-				schema(schema_)
+			inline Instance(const Reference<Instance>& this_, const Reference<Schema>& schema_): Entity(this_), schema(schema_)
 			{
 			}
 		};
@@ -48,6 +53,16 @@ namespace Nu
 			{
 			}
 		};
+		class ReturnCommand: public Command
+		{
+		public:
+			const Reference<Instance> instance;
+		public:
+			inline ReturnCommand(const Reference<Instance>& instance_):
+				instance(instance_)
+			{
+			}
+		};
 		class AlgorithmDeclaration
 		{
 		public:
@@ -60,14 +75,16 @@ namespace Nu
 			{
 			}
 		};
-		class Algorithm
+		class Algorithm:
+			public Entity
 		{
 		public:
 			const Reference<Schema> result;
 			const Vector<Reference<Instance>> arguments;
 			const Vector<Reference<Command>> commands;
 		public:
-			inline Algorithm(const Reference<AlgorithmDeclaration>& algorithmDeclaration_, const Vector<Reference<Instance>>& arguments_, const Vector<Reference<Command>>& commands_):
+			inline Algorithm(const Reference<Algorithm>& this_, const Reference<AlgorithmDeclaration>& algorithmDeclaration_, const Vector<Reference<Instance>>& arguments_, const Vector<Reference<Command>>& commands_):
+				Entity(this_),
 				result(algorithmDeclaration_->result),
 				arguments(arguments_),
 				commands(commands_)
@@ -88,6 +105,20 @@ namespace Nu
 			{
 			}
 		};
+		class Assembly
+		{
+		public:
+			const Map<Reference<Entity>, String> names;
+			const Vector<Reference<Algorithm>> algorithms;
+			const Map<Reference<AlgorithmDeclaration>, Reference<Algorithm>> algorithmDeclarationsLookup;
+		public:
+			inline Assembly(const Map<Reference<Entity>, String>& names_, const Vector<Reference<Algorithm>>& algorithms_, const Map<Reference<AlgorithmDeclaration>, Reference<Algorithm>>& algorithmDeclarationsLookup_):
+				names(names_),
+				algorithms(algorithms_),
+				algorithmDeclarationsLookup(algorithmDeclarationsLookup_)
+			{
+			}
+		};
 		class Parser
 		{
 		public:
@@ -102,7 +133,7 @@ namespace Nu
 			static inline String Clean(const String& input_);
 		protected:
 		public:
-			inline void Parse(const String& input_);
+			inline Reference<Assembly> Parse(const String& input_);
 		};
 	}
 }
@@ -317,7 +348,7 @@ start:
 	return output;
 }
 
-void Nu::Eta::Parser::Parse(const String& input_)
+Nu::Reference<Nu::Eta::Assembly> Nu::Eta::Parser::Parse(const String& input_)
 {
 	auto match = [](const String& value, const String& source, It& i)
 	{
@@ -448,10 +479,12 @@ void Nu::Eta::Parser::Parse(const String& input_)
 	{
 		if (i != source.end() && *i == '$')
 		{
+			auto o = i;
+
 			++i;
 
 			auto j = SkipNumbers(source, i);
-			auto name = String(i, j);
+			auto name = String(o, j);
 
 			i = j;
 			
@@ -466,11 +499,13 @@ void Nu::Eta::Parser::Parse(const String& input_)
 	{
 		if (i != source.end() && *i == '$')
 		{
+			auto o = i;
+
 			++i;
 
 			auto j = SkipNumbers(source, i);
-			auto name = String(i, j);
-			auto instance = MakeReference<Instance>(schema_);
+			auto name = String(o, j);
+			auto instance = Make<Instance>(schema_);
 
 			instances[name] = instance;
 
@@ -487,10 +522,12 @@ void Nu::Eta::Parser::Parse(const String& input_)
 	{
 		if (i != source.end() && *i == '$')
 		{
+			auto o = i;
+
 			++i;
 
 			auto j = SkipNumbers(source, i);
-			auto name = String(i, j);
+			auto name = String(o, j);
 			auto it = instances.find(name);
 
 			if (it != instances.end())
@@ -541,7 +578,7 @@ void Nu::Eta::Parser::Parse(const String& input_)
 					{
 						++i;
 
-						auto schema = MakeReference<Schema>();
+						auto schema = Make<Schema>();
 
 						if (schemas.find(schemaName) != schemas.end())
 						{
@@ -792,8 +829,10 @@ void Nu::Eta::Parser::Parse(const String& input_)
 													{
 														++i;
 
-														auto instance = MakeReference<Instance>(schema);
+														auto instance = Make<Instance>(schema);
 														auto create = MakeReference<CreateCommand>(instance);
+														
+														instances[*name] = instance;
 
 														return create;
 													}
@@ -880,8 +919,10 @@ void Nu::Eta::Parser::Parse(const String& input_)
 															{
 																++i;
 
-																auto result = MakeReference<Instance>(algorithmDeclaration->result);
+																auto result = Make<Instance>(algorithmDeclaration->result);
 																auto call = MakeReference<CallCommand>(algorithmDeclaration, result, arguments);
+																
+																instances[*name] = result;
 
 																return call;
 															}
@@ -904,27 +945,40 @@ void Nu::Eta::Parser::Parse(const String& input_)
 												{
 													throw Exception();
 												}
-												
-												/*if (auto schema = matchSchema(source, i))
-												{
-													i = SkipWhitespaces(source, i);
-
-													if (i != source.end() && *i == ';')
-													{
-														++i;
-
-														auto instance = MakeReference<Instance>(schema);
-														auto create = MakeReference<CreateCommand>(instance);
-
-														return create;
-													}
-													else
-													{
-														throw Exception();
-													}
-												}
-*/
 											}
+										}
+									}
+
+									i = o;
+									return nullptr;
+								};
+								auto parseReturnCommand = [&](const String& source, It& i) -> Reference<ReturnCommand>
+								{
+									auto o = i;
+									
+									if (match("return", source, i))
+									{
+										i = SkipWhitespaces(source, i);
+										
+										if (auto instance = parseExistedInstance(source, i))
+										{
+
+											if (i != source.end() && *i == ';')
+											{
+												++i;
+												
+												auto return_ = MakeReference<ReturnCommand>(instance);
+
+												return return_;
+											}
+											else
+											{
+												throw Exception();
+											}
+										}
+										else
+										{
+											throw Exception();
 										}
 									}
 
@@ -947,6 +1001,10 @@ void Nu::Eta::Parser::Parse(const String& input_)
 									{
 										commands.push_back(call);
 									}
+									else if (auto ret = parseReturnCommand(source, i))
+									{
+										commands.push_back(ret);
+									}
 									else
 									{
 										break;
@@ -965,7 +1023,7 @@ void Nu::Eta::Parser::Parse(const String& input_)
 									{
 										++i;
 
-										auto algorithm = MakeReference<Algorithm>(algorithmDeclaration, arguments, commands);
+										auto algorithm = Make<Algorithm>(algorithmDeclaration, arguments, commands);
 
 										if (algorithms.find(algorithmDeclaration) != algorithms.end())
 										{
@@ -1010,6 +1068,53 @@ void Nu::Eta::Parser::Parse(const String& input_)
 			}
 		}
 	}
+
+	auto names = Map<Reference<Entity>, String>();
+	{
+		for (auto &it : schemas)
+		{
+			auto &name = it.first;
+			auto &schema = it.second;
+
+			names[schema] = name;
+		}
+		for (auto &i : algorithmsDeclarations)
+		{
+			auto &name = i.first;
+			auto &algorithmDeclaration = i.second;
+			auto &algorithm = algorithms[algorithmDeclaration];
+
+			names[algorithm] = name;
+		}
+		for (auto &i : instances)
+		{
+			auto name = i.first;
+			auto &instance = i.second;
+
+			names[instance] = name;
+		}
+	}
+	auto algorithms2 = Vector<Reference<Algorithm>>();
+	{
+		for (auto &i : algorithms)
+		{
+			auto &algorithm = i.second;
+
+			algorithms2.push_back(algorithm);
+		}
+	}
+	auto algorithmDeclarationLookup = Map<Reference<AlgorithmDeclaration>, Reference<Algorithm>>();
+	{
+		for (auto &i : algorithmsDeclarations)
+		{
+			auto &algorithmDeclaration = i.second;
+			auto &algorithm = algorithms[algorithmDeclaration];
+
+			algorithmDeclarationLookup[algorithmDeclaration] = algorithm;
+		}
+	}
+
+	return MakeReference<Assembly>(names, algorithms2, algorithmDeclarationLookup);
 }
 
 #pragma endregion

@@ -361,6 +361,7 @@ inline bool Nu::Lexing2::Lexer::IsSign(const Glyph& glyph_)
 		glyph_ == '&' ||
 		glyph_ == '<' ||
 		glyph_ == '>' ||
+		glyph_ == '=' ||
 		glyph_ == '+' ||
 		glyph_ == '-' ||
 		glyph_ == '*' ||
