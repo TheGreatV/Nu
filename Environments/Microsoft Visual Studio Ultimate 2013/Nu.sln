@@ -79,6 +79,12 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Translator-C", "Projects\Tr
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Eta2", "Projects\Eta2\Eta2.vcxproj", "{4088D00C-4B87-40D3-AA5A-B2249C5F1597}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Eta2TestGenerator", "Projects\Eta2TestGenerator\Eta2TestGenerator.vcxproj", "{8BCAC136-AB8E-4DBF-9887-8243FD92A33A}"
+	ProjectSection(ProjectDependencies) = postProject
+		{4088D00C-4B87-40D3-AA5A-B2249C5F1597} = {4088D00C-4B87-40D3-AA5A-B2249C5F1597}
+		{FF63B429-7D7C-456E-9EB2-A9AC8113D178} = {FF63B429-7D7C-456E-9EB2-A9AC8113D178}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -145,6 +151,10 @@ Global
 		{4088D00C-4B87-40D3-AA5A-B2249C5F1597}.Debug|Win32.Build.0 = Debug|Win32
 		{4088D00C-4B87-40D3-AA5A-B2249C5F1597}.Release|Win32.ActiveCfg = Release|Win32
 		{4088D00C-4B87-40D3-AA5A-B2249C5F1597}.Release|Win32.Build.0 = Release|Win32
+		{8BCAC136-AB8E-4DBF-9887-8243FD92A33A}.Debug|Win32.ActiveCfg = Debug|Win32
+		{8BCAC136-AB8E-4DBF-9887-8243FD92A33A}.Debug|Win32.Build.0 = Debug|Win32
+		{8BCAC136-AB8E-4DBF-9887-8243FD92A33A}.Release|Win32.ActiveCfg = Release|Win32
+		{8BCAC136-AB8E-4DBF-9887-8243FD92A33A}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

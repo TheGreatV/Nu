@@ -116,6 +116,68 @@ namespace Nu
 	public:
 		inline NotImplementedException& operator = (const NotImplementedException& source) = delete;
 	};
+
+	inline Vector<String> Split(const String& source_, const String& delimiter_)
+	{
+		if (delimiter_.empty())
+		{
+			throw Exception("Delimiter should not be empty.");
+		}
+
+		Vector<String> output;
+
+		auto o = 0;
+		auto i = source_.find_first_of(delimiter_);
+
+		while (i != String::npos)
+		{
+			auto part = source_.substr(o, i - o);
+
+			output.push_back(part);
+
+			o = i + delimiter_.size();
+			i = source_.find_first_of(delimiter_, o);
+		}
+
+		if (o < static_cast<decltype(o)>(source_.size()))
+		{
+			auto part = source_.substr(o, source_.size() - o);
+
+			output.push_back(part);
+		}
+
+		return Move(output);
+	}
+	inline String Replace(const String& source_, const String& target_, const String& value_)
+	{
+		Vector<Size> matches;
+
+		auto it = source_.find(target_);
+
+		while (it != String::npos)
+		{
+			matches.push_back(it);
+
+			it = source_.find(target_, it + target_.size());
+		}
+
+		String output;
+		Size l = 0;
+
+		for (auto &i : matches)
+		{
+			output += source_.substr(l, i - l) + value_;
+
+			l = i + target_.size();
+		}
+
+		if (l < source_.size())
+		{
+			output += source_.substr(l);
+		}
+
+		return output;
+	}
 }
 
 

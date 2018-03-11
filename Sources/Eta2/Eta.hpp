@@ -799,7 +799,7 @@ Nu::Eta2::Parser::It Nu::Eta2::Parser::SkipComment(const String& source, It i) c
 		}
 		else
 		{
-			throw Exception();
+			return i;
 		}
 	}
 }
@@ -851,6 +851,8 @@ start:
 			auto j = SkipComment(output, i);
 
 			output = String(output.begin(), i) + String(j, output.end());
+
+			i = j;
 
 			goto start;
 		}

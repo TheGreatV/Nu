@@ -646,6 +646,76 @@ namespace Testing
 				Assert::IsTrue(instance4 != nullptr);
 				Assert::IsTrue(instance4 == commandResult1->GetInstance());
 			}
+		public:
+			TEST_METHOD(Test)
+			{
+				auto source = String() +
+					"schema \"a\";" + "\n" +
+					"\"a\": {};" + "\n" +
+					"algorithm \"a\" 'f'(\"a\");" + "\n" +
+					"'f': ($1) {" + "\n" +
+					"    $0: call 'f'($1);" + "\n" +
+					"};" + "\n" +
+					"";
+				auto parser = Parser();
+				auto &assembly = parser.Parse(source);
+
+				Assert::IsTrue(assembly != nullptr);
+
+				auto &types = assembly->GetTypes();
+
+				Assert::IsTrue(types.size() == 1);
+
+				auto &type1 = types["\"a\""];
+
+				Assert::IsTrue(type1 != nullptr);
+
+				auto &algorithms = assembly->GetAlgorithms();
+
+				Assert::IsTrue(algorithms.size() == 1);
+
+				auto &algorithm1 = algorithms["'f'"];
+
+				Assert::IsTrue(algorithm1 != nullptr);
+
+				auto &algorithm1_result = UpCast<Algorithm::Result::Instance>(algorithm1->GetResult());
+
+				Assert::IsTrue(algorithm1_result != nullptr);
+				Assert::IsTrue(algorithm1_result->GetType() == type1);
+
+				auto &algorithm1_arguments = algorithm1->GetArguments();
+
+				Assert::IsTrue(algorithm1_arguments.size() == 1);
+
+				auto &algorithm1_argument1 = UpCast<Algorithm::Argument::Instance>(algorithm1_arguments[0]);
+
+				Assert::IsTrue(algorithm1_argument1 != nullptr);
+				Assert::IsTrue(algorithm1_argument1->GetInstance()->GetType() == type1);
+
+				auto &instances = assembly->GetInstances();
+
+				auto &algorithm1_commands = algorithm1->GetCommands();
+
+				Assert::IsTrue(algorithm1_commands.size() == 1);
+
+				auto &algorithm1_command1 = UpCast<Algorithm::Command::CallAlgorithm>(algorithm1_commands[0]);
+
+				Assert::IsTrue(algorithm1_command1 != nullptr);
+				Assert::IsTrue(algorithm1_command1->GetAlgorithm() == algorithm1);
+
+				auto &algorithm1_command1_result = UpCast<Algorithm::Command::CallAlgorithm::Result::Instance>(algorithm1_command1->GetResult());
+
+				Assert::IsTrue(algorithm1_command1_result != nullptr);
+				Assert::IsTrue(algorithm1_command1_result->GetInstance() != nullptr);
+				Assert::IsTrue(algorithm1_command1_result->GetInstance()->GetType() == algorithm1_result->GetType());
+
+				auto &algorithm1_command1_arguments = algorithm1_command1->GetArguments();
+
+				auto &algorithm1_command1_arguments_argument1 = UpCast<Algorithm::Command::CallAlgorithm::Argument::Instance>(algorithm1_command1_arguments[0]);
+
+				Assert::IsTrue(algorithm1_command1_arguments_argument1 != nullptr);
+				Assert::IsTrue(algorithm1_command1_arguments_argument1->GetInstance() == instances["$1"]);
+			}
 		};
 	}
 }
