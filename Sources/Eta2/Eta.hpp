@@ -80,6 +80,19 @@ namespace Nu
 			virtual Reference<Eta2::Instance> GetInstance() const = 0;
 		};
 #pragma endregion
+		class Instruction:
+			public Entity
+		{
+		public:
+			using Result = Algorithm::Result;
+			using Command = Algorithm::Command;
+			using Commands = Algorithm::Commands;
+		public:
+			virtual ~Instruction() override = default;
+		public:
+			virtual Reference<Result> GetResult() const = 0;
+			virtual Commands GetCommands() const = 0;
+		};
 		class Instance:
 			public Entity
 		{
@@ -96,6 +109,7 @@ namespace Nu
 			class CreateInstance;
 			class ReturnInstance;
 			class CallAlgorithm;
+			class Block;
 		public:
 			virtual ~Command() override = default;
 		};
@@ -177,6 +191,16 @@ namespace Nu
 			virtual Reference<Eta2::Instance> GetInstance() const = 0;
 		};
 #pragma endregion
+#pragma region Algorithm::Command::Block
+		class Algorithm::Command::Block:
+			public Command
+		{
+		public:
+			virtual ~Block() override = default;
+		public:
+			virtual Commands GetCommands() const = 0;
+		};
+#pragma endregion
 
 
 		class Assembly:
@@ -198,14 +222,19 @@ namespace Nu
 			public Entity
 		{
 		protected:
-			class InstanceWrapper;
 			class Type;
 			class Algorithm;
+			class Instruction;
 			class Instance;
 		protected:
 			class Assembly;
 		protected:
 			using It = String::iterator;
+		protected:
+			Map<String, Reference<Type>> types;
+			Map<String, Reference<Instruction>> instructions;
+			Map<String, Reference<Algorithm>> algorithms;
+			Map<String, Reference<Instance>> instances;
 		public:
 			virtual ~Parser() override = default;
 		protected:
@@ -215,6 +244,264 @@ namespace Nu
 			inline It SkipWhitespaces(const String& source, It i) const;
 			inline It SkipNumbers(const String& source, It i) const;
 			inline String Clean(const String& input_) const;
+		protected:
+			inline bool Match(const String& value_, const String& source_, It& i_)
+			{
+				auto o = i_;
+
+				for (auto j = value_.begin(); j != value_.end(); ++j)
+				{
+					if (i_ != source_.end())
+					{
+						if (*i_ != *j)
+						{
+							i_ = o;
+
+							return false;
+						}
+
+						++i_;
+					}
+					else
+					{
+						i_ = o;
+
+						return false;
+					}
+				}
+
+				return true;
+			}
+			inline Reference<Type> MatchType(const String& source_, It& i_)
+			{
+				auto v = *i_;
+
+				if (v == '"')
+				{
+					auto j = SkipDoubleQuotes(source_, i_);
+					auto name = String(i_, j);
+					auto it = types.find(name);
+
+					if (it != types.end())
+					{
+						auto type = (*it).second;
+
+						i_ = j;
+
+						return type;
+					}
+					else
+					{
+						throw Exception();
+					}
+				}
+
+				return nullptr;
+			}
+			inline Reference<Algorithm> MatchAlgorithm(const String& source_, It& i_)
+			{
+				if (i_ != source_.end())
+				{
+					auto v = *i_;
+
+					if (v == '\'')
+					{
+						auto j = SkipSingleQuotes(source_, i_);
+						auto name = String(i_, j);
+						auto it = algorithms.find(name);
+
+						if (it != algorithms.end())
+						{
+							auto algorithms = (*it).second;
+
+							i_ = j;
+
+							return algorithms;
+						}
+						else
+						{
+							throw Exception();
+						}
+					}
+				}
+
+				return nullptr;
+			}
+			inline Reference<Instance> ParseInstance(const String& source_, It& i_, const Reference<Type>& type_)
+			{
+				if (auto name = ParseInstanceName(source_, i_))
+				{
+					auto instance = Make<Instance>(type_);
+
+					instances[*name] = instance;
+
+					return instance;
+				}
+
+				return nullptr;
+			}
+			inline Reference<Instance> ParseExistedInstance(const String& source_, It& i_)
+			{
+				if (auto name = ParseInstanceName(source_, i_))
+				{
+					auto it = instances.find(*name);
+
+					if (it != instances.end())
+					{
+						auto instance = (*it).second;
+
+						return instance;
+					}
+					else
+					{
+						throw Exception();
+					}
+				}
+
+				return nullptr;
+			}
+			inline Reference<String> ParseInstanceName(const String& source_, It& i_)
+			{
+				if (i_ != source_.end() && *i_ == '$')
+				{
+					auto o = i_;
+
+					++i_;
+
+					auto j = SkipNumbers(source_, i_);
+					auto name = String(o, j);
+
+					i_ = j;
+
+					return MakeReference<String>(name);
+				}
+				else
+				{
+					return nullptr;
+				}
+			}
+			inline Reference<String> ParseInstructionName(const String& source_, It& i_)
+			{
+				if (i_ != source_.end() && *i_ == '%')
+				{
+					auto o = i_;
+
+					++i_;
+
+					auto j = SkipNumbers(source_, i_);
+					auto name = String(o, j);
+
+					i_ = j;
+
+					return MakeReference<String>(name);
+				}
+				else
+				{
+					return nullptr;
+				}
+			}
+			inline bool ParseTypeDeclaration(const String& source_, It& i_)
+			{
+				if (Match("schema", source_, i_))
+				{
+					i_ = SkipWhitespaces(source_, i_);
+
+					if (i_ != source_.end() && *i_ == '"')
+					{
+						auto j = i_;
+
+						i_ = SkipDoubleQuotes(source_, i_);
+
+						auto typeName = String(j, i_);
+
+						i_ = SkipWhitespaces(source_, i_);
+
+						if (i_ != source_.end() && *i_ == ';')
+						{
+							++i_;
+
+							auto type = Make<Type>();
+
+							if (types.find(typeName) != types.end())
+							{
+								throw Exception();
+							}
+
+							types[typeName] = type;
+
+							return true;
+						}
+						else
+						{
+							throw Exception();
+						}
+					}
+					else
+					{
+						throw Exception();
+					}
+				}
+
+				return false;
+			}
+			inline Reference<Type> ParseTypeDefinition(const String& source_, It& i_)
+			{
+				if (auto type = MatchType(source_, i_))
+				{
+					i_ = SkipWhitespaces(source_, i_);
+
+					if (i_ != source_.end() && *i_ == ':')
+					{
+						++i_;
+
+						i_ = SkipWhitespaces(source_, i_);
+
+						if (i_ != source_.end() && *i_ == '{')
+						{
+							++i_;
+
+							i_ = SkipWhitespaces(source_, i_);
+
+							if (i_ != source_.end() && *i_ == '}')
+							{
+								++i_;
+
+								i_ = SkipWhitespaces(source_, i_);
+
+								if (i_ != source_.end() && *i_ == ';')
+								{
+									++i_;
+
+									// TODO: schema definition
+
+									return type;
+								}
+								else
+								{
+									throw Exception();
+								}
+							}
+							else
+							{
+								throw Exception();
+							}
+						}
+						else
+						{
+							throw Exception();
+						}
+					}
+					else
+					{
+						throw Exception();
+					}
+				}
+
+				return nullptr;
+			}
+			inline bool ParseAlgorithmDeclaration(const String& source_, It& i_);
+			inline Reference<Algorithm> ParseAlgorithmDefinition(const String& source_, It& i_);
+			inline Reference<Eta2::Algorithm::Command::CreateInstance> ParseCreateInstanceCommand(const String& source_, It& i_);
 		public:
 			inline Reference<Assembly> Parse(const String& input_);
 		};
@@ -262,6 +549,41 @@ namespace Nu
 			inline Arguments GetArguments2() const
 			{
 				return arguments;
+			}
+			inline Commands GetCommands2() const
+			{
+				return commands;
+			}
+			inline void AppendCommand(const Reference<Command>& command_)
+			{
+				commands.push_back(command_);
+			}
+		};
+#pragma endregion
+#pragma region Parser::Instruction
+		class Parser::Instruction:
+			public Eta2::Instruction,
+			public This<Instruction>
+		{
+		public:
+			using Result = Parser::Algorithm::Result;
+			using Command = Parser::Algorithm::Command;
+		public:
+			using Commands = Parser::Algorithm::Commands;
+		protected:
+			const Reference<Result> result;
+			Commands commands;
+		public:
+			// inline Algorithm(const Reference<Algorithm>& this_, const Reference<Result>& result_, const Arguments& arguments_): This(this_), result(result_), arguments(arguments_)
+			// {
+			// }
+			virtual ~Instruction() override = default;
+		public:
+			inline virtual Reference<Eta2::Algorithm::Result> GetResult() const override;
+			inline virtual Eta2::Algorithm::Commands GetCommands() const override;
+			inline Reference<Result> GetResult2() const
+			{
+				return result;
 			}
 			inline Commands GetCommands2() const
 			{
@@ -327,7 +649,7 @@ namespace Nu
 			{
 				return type;
 			}
-			Reference<Type> GetType2() const
+			inline Reference<Type> GetType2() const
 			{
 				return type;
 			}
@@ -364,7 +686,7 @@ namespace Nu
 			{
 				return instance;
 			}
-			Reference<Parser::Instance> GetInstance2() const
+			inline Reference<Parser::Instance> GetInstance2() const
 			{
 				return instance;
 			}
@@ -379,6 +701,7 @@ namespace Nu
 			class CreateInstance;
 			class ReturnInstance;
 			class CallAlgorithm;
+			class Block;
 		public:
 			inline Command(const Reference<Command>& this_):
 				This(this_)
@@ -404,7 +727,7 @@ namespace Nu
 			{
 				return instance;
 			}
-			virtual Reference<Instance> GetInstance2() const
+			inline Reference<Instance> GetInstance2() const
 			{
 				return instance;
 			}
@@ -427,7 +750,7 @@ namespace Nu
 			{
 				return instance;
 			}
-			virtual Reference<Instance> GetInstance2() const
+			inline Reference<Instance> GetInstance2() const
 			{
 				return instance;
 			}
@@ -547,6 +870,36 @@ namespace Nu
 			}
 		};
 #pragma endregion
+#pragma region Parser::Algorithm::Command::Block
+		class Parser::Algorithm::Command::Block:
+			public Eta2::Algorithm::Command::Block,
+			public Command
+		{
+		protected:
+			Algorithm::Commands commands;
+		public:
+			inline Block(const Reference<Block>& this_, const Reference<Instance>& instance_): Algorithm::Command(this_)
+			{
+			}
+			virtual ~Block() override = default;
+		public:
+			inline virtual Eta2::Algorithm::Commands GetCommands() const override
+			{
+				Eta2::Algorithm::Commands result(commands.size());
+
+				for (Size i = 0; i < commands.size(); ++i)
+				{
+					result[i] = commands[i];
+				}
+
+				return Move(result);
+			}
+			inline Algorithm::Commands GetCommands2() const
+			{
+				return commands;
+			}
+		};
+#pragma endregion
 
 #pragma region Parser::Assembly
 		class Parser::Assembly:
@@ -657,6 +1010,26 @@ Nu::Eta2::Algorithm::Arguments Nu::Eta2::Parser::Algorithm::GetArguments() const
 Nu::Eta2::Algorithm::Commands Nu::Eta2::Parser::Algorithm::GetCommands() const
 {
 	Eta2::Algorithm::Commands commandsToReturn(commands.size());
+
+	for (Size i = 0; i < commands.size(); ++i)
+	{
+		commandsToReturn[i] = commands[i];
+	}
+
+	return Move(commandsToReturn);
+}
+
+#pragma endregion
+
+#pragma region Instruction
+
+Nu::Reference<Nu::Eta2::Instruction::Result> Nu::Eta2::Parser::Instruction::GetResult() const
+{
+	return result;
+}
+Nu::Eta2::Instruction::Commands Nu::Eta2::Parser::Instruction::GetCommands() const
+{
+	Eta2::Instruction::Commands commandsToReturn(commands.size());
 
 	for (Size i = 0; i < commands.size(); ++i)
 	{
@@ -865,352 +1238,86 @@ start:
 	return output;
 }
 
-Nu::Reference<Nu::Eta2::Parser::Assembly> Nu::Eta2::Parser::Parse(const String& input_)
+bool Nu::Eta2::Parser::ParseAlgorithmDeclaration(const String& source_, It& i_)
 {
-	auto match = [](const String& value, const String& source, It& i)
+	if (Match("algorithm", source_, i_))
 	{
-		auto o = i;
+		i_ = SkipWhitespaces(source_, i_);
 
-		for (auto j = value.begin(); j != value.end(); ++j)
+		if (auto resultType = MatchType(source_, i_))
 		{
-			if (i != source.end())
+			i_ = SkipWhitespaces(source_, i_);
+
+			if (i_ != source_.end() && *i_ == '\'')
 			{
-				if (*i != *j)
+				auto j = i_;
+
+				i_ = SkipSingleQuotes(source_, i_);
+
+				auto algorithmName = String(j, i_);
+
+				i_ = SkipWhitespaces(source_, i_);
+
+				if (i_ != source_.end() && *i_ == '(')
 				{
-					i = o;
+					++i_;
 
-					return false;
-				}
-
-				++i;
-			}
-			else
-			{
-				i = o;
-
-				return false;
-			}
-		}
-
-		return true;
-	};
-
-	Map<String, Reference<Type>> types;
-
-	auto matchType = [&](const String& source, It& i) -> Reference<Type>
-	{
-		auto v = *i;
-
-		if (v == '"')
-		{
-			auto j = SkipDoubleQuotes(source, i);
-			auto name = String(i, j);
-			auto it = types.find(name);
-
-			if (it != types.end())
-			{
-				auto type = (*it).second;
-
-				i = j;
-
-				return type;
-			}
-			else
-			{
-				throw Exception();
-			}
-		}
-
-		return nullptr;
-	};
-
-	Map<String, Reference<Algorithm>> algorithms;
-
-	auto matchAlgorithm = [&](const String& source, It& i) -> Reference<Algorithm>
-	{
-		auto v = *i;
-
-		if (v == '\'')
-		{
-			auto j = SkipSingleQuotes(source, i);
-			auto name = String(i, j);
-			auto it = algorithms.find(name);
-
-			if (it != algorithms.end())
-			{
-				auto algorithms = (*it).second;
-
-				i = j;
-
-				return algorithms;
-			}
-			else
-			{
-				throw Exception();
-			}
-		}
-
-		return nullptr;
-	};
-
-	Map<String, Reference<Instance>> instances;
-
-	auto parseInstanceName = [&](const String& source, It& i) -> Reference<String>
-	{
-		if (i != source.end() && *i == '$')
-		{
-			auto o = i;
-
-			++i;
-
-			auto j = SkipNumbers(source, i);
-			auto name = String(o, j);
-
-			i = j;
-			
-			return MakeReference<String>(name);
-		}
-		else
-		{
-			return nullptr;
-		}
-	};
-	auto parseInstance = [&](const String& source, It& i, const Reference<Type>& type_) -> Reference<Instance>
-	{
-		if (i != source.end() && *i == '$')
-		{
-			auto o = i;
-
-			++i;
-
-			auto j = SkipNumbers(source, i);
-			auto name = String(o, j);
-			auto instance = Make<Instance>(type_);
-
-			instances[name] = instance;
-
-			i = j;
-
-			return instance;
-		}
-		else
-		{
-			return nullptr;
-		}
-	};
-	auto parseExistedInstance = [&](const String& source, It& i) -> Reference<Instance>
-	{
-		if (i != source.end() && *i == '$')
-		{
-			auto o = i;
-
-			++i;
-
-			auto j = SkipNumbers(source, i);
-			auto name = String(o, j);
-			auto it = instances.find(name);
-
-			if (it != instances.end())
-			{
-				auto instance = (*it).second;
-
-				i = j;
-
-				return instance;
-			}
-			else
-			{
-				throw Exception();
-			}
-		}
-		else
-		{
-			return nullptr;
-		}
-	};
-
-	auto source = Clean(input_);
-	auto i = source.begin();
-
-	while (i != source.end())
-	{
-		i = SkipWhitespaces(source, i);
-		
-		if (i != source.end())
-		{
-			auto v = *i;
-
-			if (match("schema", source, i))
-			{
-				i = SkipWhitespaces(source, i);
-
-				if (i != source.end() && *i == '"')
-				{
-					auto j = i;
-					
-					i = SkipDoubleQuotes(source, i);
-
-					auto typeName = String(j, i);
-
-					i = SkipWhitespaces(source, i);
-					
-					if (i != source.end() && *i == ';')
-					{
-						++i;
-
-						auto type = Make<Type>();
-
-						if (types.find(typeName) != types.end())
-						{
-							throw Exception();
-						}
-
-						types[typeName] = type;
-					}
-					else
-					{
-						throw Exception();
-					}
-				}
-				else
-				{
-					throw Exception();
-				}
-			}
-			else if (auto type = matchType(source, i))
-			{
-				i = SkipWhitespaces(source, i);
-
-				if (i != source.end() && *i == ':')
-				{
-					++i;
-					
-					i = SkipWhitespaces(source, i);
-
-					if (i != source.end() && *i == '{')
-					{
-						++i;
-						
-						i = SkipWhitespaces(source, i);
-
-						if (i != source.end() && *i == '}')
-						{
-							++i;
+					Algorithm::Arguments arguments;
 							
-							i = SkipWhitespaces(source, i);
+					while (true)
+					{
+						if (!arguments.empty())
+						{
+							i_ = SkipWhitespaces(source_, i_);
 
-							if (i != source.end() && *i == ';')
+							if (i_ != source_.end() && *i_ == ',')
 							{
-								++i;
-
-								// TODO: schema definition
+								++i_; // do nothing
 							}
 							else
 							{
-								throw Exception();
+								break; // no arguments expected
 							}
+						}
+								
+						i_ = SkipWhitespaces(source_, i_);
+
+						if (auto type = MatchType(source_, i_))
+						{
+							auto instance = Make<Instance>(type);
+							auto argument = Make<Algorithm::Argument::Instance>(instance);
+
+							arguments.push_back(argument);
 						}
 						else
 						{
-							throw Exception();
+							break;
 						}
 					}
-					else
+							
+					i_ = SkipWhitespaces(source_, i_);
+
+					if (i_ != source_.end() && *i_ == ')')
 					{
-						throw Exception();
-					}
-				}
-				else
-				{
-					throw Exception();
-				}
-			}
-			else if (match("algorithm", source, i))
-			{
-				i = SkipWhitespaces(source, i);
+						++i_;
 
-				if (auto resultType = matchType(source, i))
-				{
-					i = SkipWhitespaces(source, i);
-
-					if (i != source.end() && *i == '\'')
-					{
-						auto j = i;
-
-						i = SkipSingleQuotes(source, i);
-
-						auto algorithmName = String(j, i);
-
-						i = SkipWhitespaces(source, i);
-
-						if (i != source.end() && *i == '(')
+						i_ = SkipWhitespaces(source_, i_);
+								
+						if (i_ != source_.end() && *i_ == ';')
 						{
-							++i;
+							++i_;
 
-							Algorithm::Arguments arguments;
-							
-							while (true)
+							auto result = Make<Algorithm::Result::Instance>(resultType);
+							auto algorithm = Make<Algorithm>(Cast<Algorithm::Result>(result), arguments);
+
+							if (algorithms.find(algorithmName) != algorithms.end())
 							{
-								if (!arguments.empty())
-								{
-									i = SkipWhitespaces(source, i);
-
-									if (i != source.end() && *i == ',')
-									{
-										++i; // do nothing
-									}
-									else
-									{
-										break; // no arguments expected
-									}
-								}
-								
-								i = SkipWhitespaces(source, i);
-
-								if (auto type = matchType(source, i))
-								{
-									auto instance = Make<Instance>(type);
-									auto argument = Make<Algorithm::Argument::Instance>(instance);
-
-									arguments.push_back(argument);
-								}
-								else
-								{
-									break;
-								}
+								throw Exception();
 							}
-							
-							i = SkipWhitespaces(source, i);
-
-							if (i != source.end() && *i == ')')
-							{
-								++i;
-
-								i = SkipWhitespaces(source, i);
-								
-								if (i != source.end() && *i == ';')
-								{
-									++i;
-
-									auto result = Make<Algorithm::Result::Instance>(resultType);
-									auto algorithm = Make<Algorithm>(Cast<Algorithm::Result>(result), arguments);
-
-									if (algorithms.find(algorithmName) != algorithms.end())
-									{
-										throw Exception();
-									}
 									
-									algorithms[algorithmName] = algorithm;
-								}
-								else
-								{
-									throw Exception();
-								}
-							}
-							else
-							{
-								throw Exception();
-							}
+							algorithms[algorithmName] = algorithm;
+
+							return true;
 						}
 						else
 						{
@@ -1227,232 +1334,188 @@ Nu::Reference<Nu::Eta2::Parser::Assembly> Nu::Eta2::Parser::Parse(const String& 
 					throw Exception();
 				}
 			}
-			else if (auto algorithm = matchAlgorithm(source, i))
+			else
 			{
-				i = SkipWhitespaces(source, i);
+				throw Exception();
+			}
+		}
+		else
+		{
+			throw Exception();
+		}
+	}
 
-				if (i != source.end() && *i == ':')
-				{
-					++i;
+	return false;
+}
+Nu::Reference<Nu::Eta2::Parser::Algorithm> Nu::Eta2::Parser::ParseAlgorithmDefinition(const String& source_, It& i_)
+{
+	if (auto algorithm = MatchAlgorithm(source_, i_))
+	{
+		i_ = SkipWhitespaces(source_, i_);
 
-					i = SkipWhitespaces(source, i);
+		if (i_ != source_.end() && *i_ == ':')
+		{
+			++i_;
 
-					if (i != source.end() && *i == '(')
-					{
-						++i;
+			i_ = SkipWhitespaces(source_, i_);
 
-						auto &expectedArguments = algorithm->GetArguments2();
+			if (i_ != source_.end() && *i_ == '(')
+			{
+				++i_;
+
+				auto &expectedArguments = algorithm->GetArguments2();
 						
-						bool isFirstArgument = true;
+				bool isFirstArgument = true;
 
-						for (auto &expectedArgument : expectedArguments)
+				for (auto &expectedArgument : expectedArguments)
+				{
+					if (!isFirstArgument)
+					{
+						i_ = SkipWhitespaces(source_, i_);
+
+						if (i_ != source_.end() && *i_ == ',')
 						{
-							if (!isFirstArgument)
+							++i_; // do nothing
+						}
+						else
+						{
+							throw Exception();
+						}
+					}
+					else
+					{
+						isFirstArgument = false;
+					}
+
+					i_ = SkipWhitespaces(source_, i_);
+
+					if (auto argumentInstance = UpCast<Algorithm::Argument::Instance>(expectedArgument))
+					{
+						auto instance = argumentInstance->GetInstance2();
+
+						if (auto instanceName = ParseInstanceName(source_, i_))
+						{
+							auto name = *instanceName;
+
+							if (instances.find(name) == instances.end())
 							{
-								i = SkipWhitespaces(source, i);
-
-								if (i != source.end() && *i == ',')
-								{
-									++i; // do nothing
-								}
-								else
-								{
-									throw Exception();
-								}
-							}
-							else
-							{
-								isFirstArgument = false;
-							}
-
-							i = SkipWhitespaces(source, i);
-
-							if (auto argumentInstance = UpCast<Algorithm::Argument::Instance>(expectedArgument))
-							{
-								auto instance = argumentInstance->GetInstance2();
-
-								if (auto instanceName = parseInstanceName(source, i))
-								{
-									auto name = *instanceName;
-
-									if (instances.find(name) == instances.end())
-									{
-										instances[name] = instance;
-									}
-									else
-									{
-										throw Exception();
-									}
-								}
-								else
-								{
-									throw Exception();
-								}
+								instances[name] = instance;
 							}
 							else
 							{
 								throw Exception();
 							}
 						}
-
-						// TODO: parse arguments
-
-						i = SkipWhitespaces(source, i);
-
-						if (i != source.end() && *i == ')')
+						else
 						{
-							++i;
+							throw Exception();
+						}
+					}
+					else
+					{
+						throw Exception();
+					}
+				}
 
-							i = SkipWhitespaces(source, i);
+				// TODO: parse arguments
+
+				i_ = SkipWhitespaces(source_, i_);
+
+				if (i_ != source_.end() && *i_ == ')')
+				{
+					++i_;
+
+					i_ = SkipWhitespaces(source_, i_);
 							
-							if (i != source.end() && *i == '{')
+					if (i_ != source_.end() && *i_ == '{')
+					{
+						++i_;
+
+						auto parseCallCommand = [&](const String& source_, It& i_) -> Reference<Algorithm::Command::CallAlgorithm>
+						{
+							auto o = i_;
+
+							if (auto name = ParseInstanceName(source_, i_))
 							{
-								++i;
+								i_ = SkipWhitespaces(source_, i_);
 
-								auto parseCreateCommand = [&](const String& source, It& i) -> Reference<Algorithm::Command::CreateInstance>
+								if (i_ != source_.end() && *i_ == ':')
 								{
-									auto o = i;
+									++i_;
 
-									if (auto name = parseInstanceName(source, i))
+									i_ = SkipWhitespaces(source_, i_);
+
+									if (Match("call", source_, i_))
 									{
-										i = SkipWhitespaces(source, i);
-										
-										if (i != source.end() && *i == ':')
-										{
-											++i;
-
-											i = SkipWhitespaces(source, i);
-
-											if (match("create", source, i))
-											{
-												i = SkipWhitespaces(source, i);
-
-												if (auto type = matchType(source, i))
-												{
-													i = SkipWhitespaces(source, i);
-
-													if (i != source.end() && *i == ';')
-													{
-														++i;
-
-														auto instance = Make<Instance>(type);
-														auto create = Make<Algorithm::Command::CreateInstance>(instance);
-														
-														instances[*name] = instance;
-
-														return create;
-													}
-													else
-													{
-														throw Exception();
-													}
-												}
-												else
-												{
-													throw Exception();
-												}
-											}
-										}
-									}
-
-									i = o;
-									return nullptr;
-								};
-								auto parseCallCommand = [&](const String& source, It& i) -> Reference<Algorithm::Command::CallAlgorithm>
-								{
-									auto o = i;
-
-									if (auto name = parseInstanceName(source, i))
-									{
-										i = SkipWhitespaces(source, i);
-
-										if (i != source.end() && *i == ':')
-										{
-											++i;
-
-											i = SkipWhitespaces(source, i);
-
-											if (match("call", source, i))
-											{
-												i = SkipWhitespaces(source, i);
+										i_ = SkipWhitespaces(source_, i_);
 												
-												if (auto algorithm = matchAlgorithm(source, i))
+										if (auto algorithm = MatchAlgorithm(source_, i_))
+										{
+											if (i_ != source_.end() && *i_ == '(')
+											{
+												++i_;
+
+												i_ = SkipWhitespaces(source_, i_);
+
+												// parce arguments
+												Algorithm::Command::CallAlgorithm::Arguments arguments;
+												auto &expectedArguments = algorithm->GetArguments2();
+
+												for (auto &expectedArgument : expectedArguments)
 												{
-													if (i != source.end() && *i == '(')
+													if (!arguments.empty())
 													{
-														++i;
+														i_ = SkipWhitespaces(source_, i_);
 
-														i = SkipWhitespaces(source, i);
-
-														// parce arguments
-														Algorithm::Command::CallAlgorithm::Arguments arguments;
-														auto &expectedArguments = algorithm->GetArguments2();
-
-														for (auto &expectedArgument : expectedArguments)
+														if (i_ != source_.end() && *i_ == ',')
 														{
-															if (!arguments.empty())
-															{
-																i = SkipWhitespaces(source, i);
-
-																if (i != source.end() && *i == ',')
-																{
-																	++i; // do nothing
-																}
-																else
-																{
-																	throw Exception();
-																}
-															}
-
-															i = SkipWhitespaces(source, i);
-
-															if (auto instance = parseExistedInstance(source, i))
-															{
-																auto argument = Make<Algorithm::Command::CallAlgorithm::Argument::Instance>(instance);
-
-																arguments.push_back(argument);
-															}
-															else
-															{
-																throw Exception();
-															}
-														}
-
-														if (i != source.end() && *i == ')')
-														{
-															++i;
-
-															i = SkipWhitespaces(source, i);
-
-															if (i != source.end() && *i == ';')
-															{
-																++i;
-
-																if (auto instanceResult = UpCast<Algorithm::Result::Instance>(algorithm->GetResult2()))
-																{
-																	auto instance = Make<Instance>(instanceResult->GetType2());
-																	auto result = Make<Algorithm::Command::CallAlgorithm::Result::Instance>(instance);
-																	auto call = Make<Algorithm::Command::CallAlgorithm>(algorithm, result, arguments);
-
-																	instances[*name] = instance;
-
-																	return call;
-																}
-																else
-																{
-																	throw NotImplementedException();
-																}
-															}
-															else
-															{
-																throw Exception();
-															}
+															++i_; // do nothing
 														}
 														else
 														{
 															throw Exception();
 														}
 													}
+
+													i_ = SkipWhitespaces(source_, i_);
+
+													if (auto instance = ParseExistedInstance(source_, i_))
+													{
+														auto argument = Make<Algorithm::Command::CallAlgorithm::Argument::Instance>(instance);
+
+														arguments.push_back(argument);
+													}
+													else
+													{
+														throw Exception();
+													}
+												}
+
+												if (i_ != source_.end() && *i_ == ')')
+												{
+													++i_;
+
+													i_ = SkipWhitespaces(source_, i_);
+
+													if (i_ != source_.end() && *i_ == ';')
+													{
+														++i_;
+
+														if (auto instanceResult = UpCast<Algorithm::Result::Instance>(algorithm->GetResult2()))
+														{
+															auto instance = Make<Instance>(instanceResult->GetType2());
+															auto result = Make<Algorithm::Command::CallAlgorithm::Result::Instance>(instance);
+															auto call = Make<Algorithm::Command::CallAlgorithm>(algorithm, result, arguments);
+
+															instances[*name] = instance;
+
+															return call;
+														}
+														else
+														{
+															throw NotImplementedException();
+														}
+													}
 													else
 													{
 														throw Exception();
@@ -1462,31 +1525,6 @@ Nu::Reference<Nu::Eta2::Parser::Assembly> Nu::Eta2::Parser::Parse(const String& 
 												{
 													throw Exception();
 												}
-											}
-										}
-									}
-
-									i = o;
-									return nullptr;
-								};
-								auto parseReturnCommand = [&](const String& source, It& i) -> Reference<Algorithm::Command::ReturnInstance>
-								{
-									auto o = i;
-									
-									if (match("return", source, i))
-									{
-										i = SkipWhitespaces(source, i);
-										
-										if (auto instance = parseExistedInstance(source, i))
-										{
-
-											if (i != source.end() && *i == ';')
-											{
-												++i;
-												
-												auto return_ = Make<Algorithm::Command::ReturnInstance>(instance);
-
-												return return_;
 											}
 											else
 											{
@@ -1498,44 +1536,30 @@ Nu::Reference<Nu::Eta2::Parser::Assembly> Nu::Eta2::Parser::Parse(const String& 
 											throw Exception();
 										}
 									}
-
-									i = o;
-									return nullptr;
-								};
-
-								while (true)
-								{
-									i = SkipWhitespaces(source, i);
-
-									if (auto create = parseCreateCommand(source, i))
-									{
-										algorithm->AppendCommand(create);
-									}
-									else if (auto call = parseCallCommand(source, i))
-									{
-										algorithm->AppendCommand(call);
-									}
-									else if (auto ret = parseReturnCommand(source, i))
-									{
-										algorithm->AppendCommand(ret);
-									}
-									else
-									{
-										break;
-									}
 								}
+							}
 
-								i = SkipWhitespaces(source, i);
-
-								if (i != source.end() && *i == '}')
+							i_ = o;
+							return nullptr;
+						};
+						auto parseReturnCommand = [&](const String& source_, It& i_) -> Reference<Algorithm::Command::ReturnInstance>
+						{
+							auto o = i_;
+									
+							if (Match("return", source_, i_))
+							{
+								i_ = SkipWhitespaces(source_, i_);
+										
+								if (auto instance = ParseExistedInstance(source_, i_))
 								{
-									++i;
 
-									i = SkipWhitespaces(source, i);
-
-									if (i != source.end() && *i == ';')
+									if (i_ != source_.end() && *i_ == ';')
 									{
-										++i;
+										++i_;
+												
+										auto return_ = Make<Algorithm::Command::ReturnInstance>(instance);
+
+										return return_;
 									}
 									else
 									{
@@ -1546,6 +1570,47 @@ Nu::Reference<Nu::Eta2::Parser::Assembly> Nu::Eta2::Parser::Parse(const String& 
 								{
 									throw Exception();
 								}
+							}
+
+							i_ = o;
+							return nullptr;
+						};
+
+						while (true)
+						{
+							i_ = SkipWhitespaces(source_, i_);
+
+							if (auto create = UpCast<Algorithm::Command::CreateInstance>(ParseCreateInstanceCommand(source_, i_)))
+							{
+								algorithm->AppendCommand(create);
+							}
+							else if (auto call = parseCallCommand(source_, i_))
+							{
+								algorithm->AppendCommand(call);
+							}
+							else if (auto ret = parseReturnCommand(source_, i_))
+							{
+								algorithm->AppendCommand(ret);
+							}
+							else
+							{
+								break;
+							}
+						}
+
+						i_ = SkipWhitespaces(source_, i_);
+
+						if (i_ != source_.end() && *i_ == '}')
+						{
+							++i_;
+
+							i_ = SkipWhitespaces(source_, i_);
+
+							if (i_ != source_.end() && *i_ == ';')
+							{
+								++i_;
+
+								return algorithm;
 							}
 							else
 							{
@@ -1572,6 +1637,84 @@ Nu::Reference<Nu::Eta2::Parser::Assembly> Nu::Eta2::Parser::Parse(const String& 
 				throw Exception();
 			}
 		}
+		else
+		{
+			throw Exception();
+		}
+	}
+				
+	return nullptr;
+}
+Nu::Reference<Nu::Eta2::Algorithm::Command::CreateInstance> Nu::Eta2::Parser::ParseCreateInstanceCommand(const String& source_, It& i_)
+{
+	auto o = i_;
+
+	if (auto name = ParseInstanceName(source_, i_))
+	{
+		i_ = SkipWhitespaces(source_, i_);
+
+		if (i_ != source_.end() && *i_ == ':')
+		{
+			++i_;
+
+			i_ = SkipWhitespaces(source_, i_);
+
+			if (Match("create", source_, i_))
+			{
+				i_ = SkipWhitespaces(source_, i_);
+
+				if (auto type = MatchType(source_, i_))
+				{
+					i_ = SkipWhitespaces(source_, i_);
+
+					if (i_ != source_.end() && *i_ == ';')
+					{
+						++i_;
+
+						auto instance = Make<Instance>(type);
+						auto create = Make<Algorithm::Command::CreateInstance>(instance);
+
+						instances[*name] = instance;
+
+						return create;
+					}
+					else
+					{
+						throw Exception();
+					}
+				}
+				else
+				{
+					throw Exception();
+				}
+			}
+		}
+	}
+
+	i_ = o;
+	return nullptr;
+}
+
+
+Nu::Reference<Nu::Eta2::Parser::Assembly> Nu::Eta2::Parser::Parse(const String& input_)
+{
+	auto source = Clean(input_);
+	auto i = source.begin();
+
+	while (i != source.end())
+	{
+		i = SkipWhitespaces(source, i);
+		
+		if (ParseTypeDeclaration(source, i));
+		else if (auto type = ParseTypeDefinition(source, i));
+		else if (ParseAlgorithmDeclaration(source, i));
+		else if (auto algorithm = ParseAlgorithmDefinition(source, i));
+		else
+		{
+			throw Exception();
+		}
+		
+		i = SkipWhitespaces(source, i);
 	}
 
 	auto assembly = Make<Assembly>(types, algorithms, instances);

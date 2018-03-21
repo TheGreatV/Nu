@@ -9,15 +9,21 @@
 
 namespace Nu
 {
-	namespace Eta2
+	namespace Eta3
 	{
 		class Entity;
 		
+		
 		class Type;
+		class Instance;
+		
+		class Command;
+		
+		class Executable;
 		class Instruction;
 		class Algorithm;
-		class Instance;
 
+		
 		class Assembly;
 
 		class Parser;
@@ -27,7 +33,7 @@ namespace Nu
 
 #pragma region Nu
 
-#pragma region Eta2
+#pragma region Eta3
 
 #pragma endregion
 
