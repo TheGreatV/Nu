@@ -1,0 +1,60 @@
+# types declarations
+type 'int';
+
+# types definitions
+'int': internal;
+
+# instances declaration
+instance '$0'   'int';
+instance '$1'   'int';
+instance '$2'   'int';
+instance '$3'   'int';
+instance '$4'   'int';
+instance '$5'   'int';
+instance '$6'   'int';
+instance '$7'   'int';
+instance '$8'   'int';
+instance '$9'   'int';
+instance '$10'  'int';
+instance '$11'  'int';
+instance '$12'  'int';
+instance '$13'  'int';
+
+# instructions declaration
+instruction '%0' none;
+instruction '%1' none;
+
+# algorithms declaration
+algorithm 'int==int'            'int'   ('$0', '$1');
+algorithm 'int=int'             none    ('$2', '$3');
+algorithm 'int+int'             'int'   ('$12', '$13');
+algorithm 'if'                  none    ('$4', '%0');
+algorithm 'sum(int,int,int)'    'int'   ('$7', '$8', '$9');
+algorithm 'main'                none    ();
+
+# instructions definitions
+'%0': internal;
+'%1': {
+    call 'int=int'('$5', '$6');
+};
+
+# algorithms definitions
+'int==int'          : internal;
+'int=int'           : internal;
+'if'                : internal;
+'main'              : {
+    create '$5';
+    create '$6';
+    '$7': call 'int==int'('$5', '$6');
+    call 'if'('$7', '%0');
+    delete '$7';
+    delete '$6';
+    delete '$5';
+};
+'sum(int,int,int)'  : {
+    '$10': call 'int+int'('$7', '$8');
+    '$11': call 'int+int'('$9', '$10');
+    return '$11' from 'sum(int,int,int)';
+};
+
+

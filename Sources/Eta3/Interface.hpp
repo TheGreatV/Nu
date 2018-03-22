@@ -316,7 +316,7 @@ namespace Nu
 #pragma endregion
 #pragma region Command::Call::Algorithm::Argument::Instance
 		class Command::Call::Algorithm::Argument::Instance:
-			public Entity
+			public Argument
 		{
 		public:
 			virtual ~Instance() override = default;
@@ -326,7 +326,7 @@ namespace Nu
 #pragma endregion
 #pragma region Command::Call::Algorithm::Argument::Instruction
 		class Command::Call::Algorithm::Argument::Instruction:
-			public Entity
+			public Argument
 		{
 		public:
 			virtual ~Instruction() override = default;
@@ -334,7 +334,6 @@ namespace Nu
 			virtual Reference<Eta3::Instruction> GetInstruction() const = 0;
 		};
 #pragma endregion
-
 
 		class Assembly:
 			public Entity
